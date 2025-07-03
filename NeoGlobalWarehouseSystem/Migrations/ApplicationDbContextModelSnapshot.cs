@@ -166,10 +166,10 @@ namespace NeoGlobalWarehouseSystem.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("CanBeBoughtByEveryone")
+                    b.Property<bool>("CanBeBoughtByStudents")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("CanBeBoughtByTeacher")
+                    b.Property<bool>("CanBeBoughtByTeachers")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")

@@ -1,17 +1,28 @@
 ﻿@page "/product"
+@inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
+@inject ISnackbar Snackbar
 
 <PageTitle>Product</PageTitle>
 
 <MudContainer Class="mt-5">
     <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary" OnClick="() => NewProductExpanded = !NewProductExpanded" Disabled="NewProductExpanded == true">New Product</MudButton>
-    <MudCollapse Expanded="NewProductExpanded">
-        <NewProduct />
+    <MudCollapse Expanded="NewProductExpanded" Class="py-2">
+        <ProductEditor ButtonName="Add Product" ProcessedProduct="AddProduct" />
     </MudCollapse>
 
-    <MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product"></MudTextField>
+    <ProductsList />
 </MudContainer>
 
 @code {
-    string SearchKeyword { get; set; } = string.Empty;
     bool NewProductExpanded { get; set; } = false;
+
+    public async Task AddProduct(Data.ApplicationDb.Product product)
+    {
+        await using var applicationDbContext = await ApplicationDbContextFactory.CreateDbContextAsync();
+        await applicationDbContext.Products.AddAsync(product);
+        await applicationDbContext.SaveChangesAsync();
+
+        NewProductExpanded = false;
+        Snackbar.Add("Product has been succesfully added", Severity.Success);
+    }
 }

@@ -1,0 +1,48 @@
+﻿@using System.Globalization
+
+<MudPaper Class="pa-5 ma-1" Elevation="3" C>
+    <MudStack Spacing="3">
+        <MudTextField @bind-Value="Name" Label="Product Name"></MudTextField>
+        <MudNumericField @bind-Value="Quantity" Label="Quantity" Min="0"></MudNumericField>
+        <MudNumericField @bind-Value="Price" Label="Price" Adornment="Adornment.Start" AdornmentText="Rp." Format="N0" Culture="CultureInfo" Min="0" Max="100000000" HideSpinButtons="true"></MudNumericField>
+        <MudTextField @bind-Value="Barcode" Label="Barcode"></MudTextField>
+
+        <MudStack Row AlignItems="AlignItems.Center">
+            <MudText>For: </MudText>
+            <MudCheckBox @bind-Value="CanBeBoughtByTeachers" Label="Teachers"></MudCheckBox>
+            <MudCheckBox @bind-Value="CanBeBoughtByStudents" Label="Students"></MudCheckBox>
+        </MudStack>
+        
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ReturnProduct">@ButtonName</MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    CultureInfo CultureInfo = new("id-ID", false);
+    public string Name = string.Empty;
+    public int? Quantity;
+    public string Barcode = string.Empty;
+    public long? Price;
+    public bool CanBeBoughtByTeachers, CanBeBoughtByStudents;
+
+    [Parameter]
+    public Data.ApplicationDb.Product Product { get; set; } = new();
+
+    [Parameter]
+    public string ButtonName { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<Data.ApplicationDb.Product> ProcessedProduct { get; set; }
+
+    public async Task ReturnProduct()
+    {
+        Product.Name = Name;
+        Product.Quantity = (Quantity == null) ? 0 : Quantity.Value;
+        Product.Price = (Price == null) ? 0 : Price.Value;
+        Product.Barcode = Barcode;
+        Product.CanBeBoughtByTeachers = CanBeBoughtByTeachers;
+        Product.CanBeBoughtByStudents = CanBeBoughtByStudents;
+
+        await ProcessedProduct.InvokeAsync(Product);
+    }
+}

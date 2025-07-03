@@ -66,8 +66,8 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     Name = table.Column<string>(type: "text", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     Price = table.Column<long>(type: "bigint", nullable: false),
-                    CanBeBoughtByTeacher = table.Column<bool>(type: "boolean", nullable: false),
-                    CanBeBoughtByEveryone = table.Column<bool>(type: "boolean", nullable: false)
+                    CanBeBoughtByTeachers = table.Column<bool>(type: "boolean", nullable: false),
+                    CanBeBoughtByStudents = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
