@@ -13,6 +13,9 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
         public int Quantity { get; set; }
         public long Price { get; set; }
 
+        public bool CanBeBoughtByTeacher { get; set; }
+        public bool CanBeBoughtByEveryone { get; set; }
+
         public List<TransactionProduct> TransactionProducts { get; set; } = new();
         public List<ProductInputLog> ProductInputLog { get; set; } = new();
     }

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NeoGlobalWarehouseSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250703093038_InitialMigration")]
+    [Migration("20250703113552_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -168,6 +168,12 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("CanBeBoughtByEveryone")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanBeBoughtByTeacher")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()

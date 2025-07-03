@@ -1,0 +1,17 @@
+﻿@page "/product"
+
+<PageTitle>Product</PageTitle>
+
+<MudContainer Class="mt-5">
+    <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary" OnClick="() => NewProductExpanded = !NewProductExpanded" Disabled="NewProductExpanded == true">New Product</MudButton>
+    <MudCollapse Expanded="NewProductExpanded">
+        <NewProduct />
+    </MudCollapse>
+
+    <MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product"></MudTextField>
+</MudContainer>
+
+@code {
+    string SearchKeyword { get; set; } = string.Empty;
+    bool NewProductExpanded { get; set; } = false;
+}

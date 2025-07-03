@@ -65,7 +65,9 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     Barcode = table.Column<string>(type: "text", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
-                    Price = table.Column<long>(type: "bigint", nullable: false)
+                    Price = table.Column<long>(type: "bigint", nullable: false),
+                    CanBeBoughtByTeacher = table.Column<bool>(type: "boolean", nullable: false),
+                    CanBeBoughtByEveryone = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {

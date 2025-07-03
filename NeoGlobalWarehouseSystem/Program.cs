@@ -5,6 +5,7 @@ using NeoGlobalWarehouseSystem.Components;
 using NeoGlobalWarehouseSystem.Components.Account;
 using NeoGlobalWarehouseSystem.Data;
 using NeoGlobalWarehouseSystem.Data.ApplicationDb;
+using MudBlazor.Services;
 
 namespace NeoGlobalWarehouseSystem
 {
@@ -17,6 +18,8 @@ namespace NeoGlobalWarehouseSystem
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
+
+            builder.Services.AddMudServices();
 
             builder.Services.AddCascadingAuthenticationState();
             builder.Services.AddScoped<IdentityUserAccessor>();
