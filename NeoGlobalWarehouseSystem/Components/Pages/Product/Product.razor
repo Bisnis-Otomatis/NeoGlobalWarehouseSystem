@@ -4,25 +4,41 @@
 
 <PageTitle>Product</PageTitle>
 
-<MudContainer Class="mt-5">
+<MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
     <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary" OnClick="() => NewProductExpanded = !NewProductExpanded" Disabled="NewProductExpanded == true">New Product</MudButton>
     <MudCollapse Expanded="NewProductExpanded" Class="py-2">
         <ProductEditor ButtonName="Add Product" ProcessedProduct="AddProduct" />
     </MudCollapse>
-
-    <ProductsList />
+    <ProductsList @ref="ProductsList" />
 </MudContainer>
 
 @code {
-    bool NewProductExpanded { get; set; } = false;
+    bool NewProductExpanded = false;
+    ProductsList ProductsList = new();
 
     public async Task AddProduct(Data.ApplicationDb.Product product)
     {
         await using var applicationDbContext = await ApplicationDbContextFactory.CreateDbContextAsync();
+
+        var assignedId = await applicationDbContext.Products.OrderByDescending(x => x.Id).Select(x => x.Id).FirstOrDefaultAsync() + 1;
+        product.Id = assignedId;
+
         await applicationDbContext.Products.AddAsync(product);
+
+        // if (product.Quantity > 0)
+        // {
+        //     await applicationDbContext.ProductInputLogs.AddAsync(new ()
+        //     {
+        //         ProductId = assignedId,
+        //         QuantityInput = product.Quantity,
+        //     });
+        // }
+
         await applicationDbContext.SaveChangesAsync();
 
         NewProductExpanded = false;
         Snackbar.Add("Product has been succesfully added", Severity.Success);
+
+        await ProductsList.FetchProducts();
     }
 }

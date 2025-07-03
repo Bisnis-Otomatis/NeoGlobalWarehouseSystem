@@ -10,7 +10,7 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
         public Product Product { get; set; } = new();
         public int ProductId { get; set; }
 
-        public DateTime Timestamp { get; set; } = DateTime.Now;
+        public DateTime Timestamp { get; set; } = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
         public int QuantityInput { get; set; }
     }
 }

@@ -44,5 +44,16 @@
         Product.CanBeBoughtByStudents = CanBeBoughtByStudents;
 
         await ProcessedProduct.InvokeAsync(Product);
+        ResetFields();
+    }
+
+    public void ResetFields()
+    {
+        Product = new();
+        Name = string.Empty;
+        Quantity = null;
+        Barcode = string.Empty;
+        Price = null;
+        CanBeBoughtByTeachers = CanBeBoughtByStudents = false;
     }
 }
