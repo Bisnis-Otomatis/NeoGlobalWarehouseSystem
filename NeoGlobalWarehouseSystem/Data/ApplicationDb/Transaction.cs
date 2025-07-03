@@ -8,8 +8,12 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
         public int Id { get; set; }
 
         public User ProcessedBy { get; set; } = new();
+        public int ProcessedById { get; set; }
+
         public Teacher? Teacher { get; set; }
-        public DateTime TimeStamp { get; set; }
+        public int? TeacherId { get; set; }
+
+        public DateTime TimeStamp { get; set; } = DateTime.Now;
         public long TotalPrice { get; set; }
         public List<TransactionProduct> TransactionProducts { get; set; } = new();
     }

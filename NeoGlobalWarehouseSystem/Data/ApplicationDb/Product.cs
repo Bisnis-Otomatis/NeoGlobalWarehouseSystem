@@ -12,6 +12,8 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
         public string Name { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public long Price { get; set; }
+
         public List<TransactionProduct> TransactionProducts { get; set; } = new();
+        public List<ProductInputLog> ProductInputLog { get; set; } = new();
     }
 }

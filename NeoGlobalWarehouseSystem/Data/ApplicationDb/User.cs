@@ -4,7 +4,7 @@ using NeoGlobalWarehouseSystem.Data.ApplicationDb.Interfaces;
 namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
 {
     // Add profile data for application users by adding properties to the ApplicationUser class
-    public class User : IdentityUser, IEntityIdentificationData
+    public class User : IdentityUser<int>, IEntityIdentificationData
     {
         public string Name { get; set; } = string.Empty;
         public string IdCardNumber { get; set; } = string.Empty;
