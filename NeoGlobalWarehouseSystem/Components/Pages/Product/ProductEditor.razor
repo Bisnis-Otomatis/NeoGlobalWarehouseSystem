@@ -26,7 +26,7 @@
     public bool CanBeBoughtByTeachers, CanBeBoughtByStudents;
 
     [Parameter]
-    public Data.ApplicationDb.Product Product { get; set; } = new();
+    public Data.ApplicationDb.Product? Product { get; set; }
 
     [Parameter]
     public string ButtonName { get; set; } = string.Empty;
@@ -34,16 +34,36 @@
     [Parameter]
     public EventCallback<Data.ApplicationDb.Product> ProcessedProduct { get; set; }
 
+    protected override void OnInitialized()
+    {
+        if (Product == null)
+        {
+            Product = new();
+        }
+        else
+        {
+            Name = Product.Name;
+            Quantity = Product.Quantity == 0 ? null : Product.Quantity;
+            Barcode = Product.Barcode;
+            Price = Product.Price == 0 ? null : Product.Price;
+            CanBeBoughtByTeachers = Product.CanBeBoughtByTeachers;
+            CanBeBoughtByStudents = Product.CanBeBoughtByStudents;
+        }
+    }
+
     public async Task ReturnProduct()
     {
-        Product.Name = Name;
-        Product.Quantity = (Quantity == null) ? 0 : Quantity.Value;
-        Product.Price = (Price == null) ? 0 : Price.Value;
-        Product.Barcode = Barcode;
-        Product.CanBeBoughtByTeachers = CanBeBoughtByTeachers;
-        Product.CanBeBoughtByStudents = CanBeBoughtByStudents;
+        if (Product != null)
+        {
+            Product.Name = Name;
+            Product.Quantity = (Quantity == null) ? 0 : Quantity.Value;
+            Product.Price = (Price == null) ? 0 : Price.Value;
+            Product.Barcode = Barcode;
+            Product.CanBeBoughtByTeachers = CanBeBoughtByTeachers;
+            Product.CanBeBoughtByStudents = CanBeBoughtByStudents;
 
-        await ProcessedProduct.InvokeAsync(Product);
+            await ProcessedProduct.InvokeAsync(Product);
+        }
         ResetFields();
     }
 

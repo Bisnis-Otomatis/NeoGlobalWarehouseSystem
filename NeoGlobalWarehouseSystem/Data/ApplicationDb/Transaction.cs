@@ -7,7 +7,7 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
         [Key]
         public int Id { get; set; }
 
-        public User ProcessedBy { get; set; } = new();
+        public User ProcessedBy { get; set; } = null!;
         public int ProcessedById { get; set; }
 
         public Teacher? Teacher { get; set; }

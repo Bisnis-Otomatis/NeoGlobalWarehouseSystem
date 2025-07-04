@@ -7,7 +7,7 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
         [Key]
         public int Id { get; set; }
 
-        public Product Product { get; set; } = new();
+        public Product Product { get; set; } = null!;
         public int ProductId { get; set; }
 
         public DateTime Timestamp { get; set; } = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
