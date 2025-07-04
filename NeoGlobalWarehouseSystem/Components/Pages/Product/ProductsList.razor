@@ -59,28 +59,46 @@
         <TemplateColumn Title="Action">
             <CellTemplate>
                 <MudStack Row Spacing="0">
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="x => EditProduct(context.Item.Product)" />
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" OnClick="async x => await DeleteProduct(context.Item.Product.Id)" />
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="x => OpenUpdateDialog(context.Item.Product)" />
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" OnClick="x => OpenDeleteDialog(context.Item.Product)" />
                 </MudStack>
             </CellTemplate>
         </TemplateColumn>
     </Columns>
 </MudDataGrid>
 
-<MudDialog @bind-Visible="DialogIsVisible" Options="_dialogOptions">
+<MudDialog @bind-Visible="EditDialogIsVisible" Options="_dialogOptions">
     <DialogContent>
-        <ProductEditor Product="ProductSentToDialog" ButtonName="Edit Product" ProcessedProduct="UpdateProduct" />
+        <ProductEditor Product="ProductSentToEditDialog" ButtonName="Edit Product" ProcessedProduct="UpdateProduct" />
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Dark" OnClick="() => DialogIsVisible = false" Class="px-10">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Dark" OnClick="() => EditDialogIsVisible = false" Class="px-10">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="DeleteDialogIsVisible" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Product?</MudText>
+    </TitleContent>
+    <DialogContent>
+        This action will delete a product: @ProductSentToDeleteDialog.Name (ID: @ProductSentToDeleteDialog.Id). Continue?
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="async x => await DeleteProduct(ProductSentToDeleteDialog.Id)" Class="px-10">Delete</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Dark" OnClick="() => DeleteDialogIsVisible = false" Class="px-10">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     string SearchKeyword { get; set; } = string.Empty;
     List<ProductDTO> Products { get; set; } = new();
-    bool DialogIsVisible { get; set; } = false;
-    Data.ApplicationDb.Product ProductSentToDialog { get; set; } = new();
+
+    bool EditDialogIsVisible { get; set; } = false;
+    Data.ApplicationDb.Product ProductSentToEditDialog { get; set; } = new();
+
+    bool DeleteDialogIsVisible { get; set; } = false;
+    Data.ApplicationDb.Product ProductSentToDeleteDialog { get; set; } = new();
+
     DialogOptions _dialogOptions = new() { FullWidth = true };
 
     public bool PerformSearch(ProductDTO productDTO)
@@ -100,10 +118,10 @@
         }
     }
 
-    public void EditProduct(Data.ApplicationDb.Product product)
+    public void OpenUpdateDialog(Data.ApplicationDb.Product product)
     {
-        DialogIsVisible = true;
-        ProductSentToDialog = product;
+        EditDialogIsVisible = true;
+        ProductSentToEditDialog = product;
     }
 
     public async Task UpdateProduct(Data.ApplicationDb.Product product)
@@ -119,8 +137,14 @@
                 .SetProperty(x => x.CanBeBoughtByStudents, product.CanBeBoughtByStudents)
             );
 
-        DialogIsVisible = false;
+        EditDialogIsVisible = false;
         Snackbar.Add("Product has been succesfully updated", Severity.Success);
+    }
+
+    public void OpenDeleteDialog(Data.ApplicationDb.Product product)
+    {
+        DeleteDialogIsVisible = true;
+        ProductSentToDeleteDialog = product;
     }
 
     public async Task DeleteProduct(int Id)
@@ -129,6 +153,9 @@
         await applicationDbContext.Products.Where(x => x.Id == Id).ExecuteDeleteAsync();
 
         await FetchProducts();
+
+        DeleteDialogIsVisible = false;
+        Snackbar.Add("Product has been succesfully deleted", Severity.Success);
     }
 
     public async Task FetchProducts()
