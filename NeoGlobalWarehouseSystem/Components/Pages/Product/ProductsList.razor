@@ -118,14 +118,15 @@
         var searchString = $"{productDTO.Product.Id}{productDTO.Product.Name} {productDTO.Product.Barcode} {productDTO.Product.Quantity} {"Rp. " + productDTO.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))} {(productDTO.Product.CanBeBoughtByStudents ? "student" : "")} {(productDTO.Product.CanBeBoughtByTeachers ? "teacher" : "")} {productDTO.LastProductInputDateTime} {productDTO.LastTransactionDateTime}".ToLowerInvariant();
 
         var searchKeywords = SearchKeyword.ToLowerInvariant().Split(" ");
+        int countMatch = 0;
         foreach (var keyword in searchKeywords)
         {
             if (searchString.Contains(keyword))
             {
-                return true;
+                countMatch++;
             }
         }
-        return false;
+        return countMatch == searchKeywords.Length; //if all match, return product
     }
 
     public void OpenUpdateDialog(Data.ApplicationDb.Product product)
