@@ -2,7 +2,9 @@
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @inject ISnackbar Snackbar
 
-<MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product"></MudTextField>
+<MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product" Immediate="true"></MudTextField>
+
+<MudSwitch @bind-Value="IsShorterTable" Label="Show in detail" Color="Color.Primary" />
 
 <MudDataGrid Items="@Products" Dense="true" Filterable="true" Hover="true" QuickFilter="PerformSearch">
     <Columns>
@@ -18,7 +20,7 @@
         <PropertyColumn Property="x => x.Product.CanBeBoughtByStudents"
             Title="Student">
             <CellTemplate>
-                @if(context.Item.Product.CanBeBoughtByStudents == true)
+                @if (context.Item.Product.CanBeBoughtByStudents == true)
                 {
                     <MudIcon Icon="@Icons.Material.Filled.Check"></MudIcon>
                 }
@@ -26,36 +28,40 @@
             </PropertyColumn>
         <PropertyColumn Property="x => x.Product.CanBeBoughtByTeachers" Title="Teachers">
             <CellTemplate>
-                @if(context.Item.Product.CanBeBoughtByTeachers == true)
+                @if (context.Item.Product.CanBeBoughtByTeachers == true)
                 {
                     <MudIcon Icon="@Icons.Material.Filled.Check"></MudIcon>
                 }
             </CellTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.LastProductInputDateTime" Title="Product Input" >
-            <CellTemplate>
-                @if (context.Item.LastProductInputDateTime == default(DateTime))
-                {
-                    @("-")
-                }
-                else
-                {
-                    @context.Item.LastProductInputDateTime
-                }
-            </CellTemplate>
-        </PropertyColumn>
-        <PropertyColumn Property="x => x.LastTransactionDateTime" Title="Last Tx">
-            <CellTemplate>
-                @if (context.Item.LastTransactionDateTime == default(DateTime))
-                {
-                    @("-")
-                }
-                else
-                {
-                    @context.Item.LastTransactionDateTime
-                }
-            </CellTemplate>
-        </PropertyColumn>
+
+        @if (IsShorterTable)
+        {
+            <PropertyColumn Property="x => x.LastProductInputDateTime" Title="Product Input">
+                <CellTemplate>
+                    @if (context.Item.LastProductInputDateTime == default(DateTime))
+                    {
+                        @("-")
+                    }
+                    else
+                    {
+                        @context.Item.LastProductInputDateTime
+                    }
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.LastTransactionDateTime" Title="Last Tx">
+                <CellTemplate>
+                    @if (context.Item.LastTransactionDateTime == default(DateTime))
+                    {
+                        @("-")
+                    }
+                    else
+                    {
+                        @context.Item.LastTransactionDateTime
+                    }
+                </CellTemplate>
+            </PropertyColumn>
+        }
         <TemplateColumn Title="Action">
             <CellTemplate>
                 <MudStack Row Spacing="0">
@@ -90,6 +96,8 @@
 </MudDialog>
 
 @code {
+    bool IsShorterTable { get; set; } = false;
+
     string SearchKeyword { get; set; } = string.Empty;
     List<ProductDTO> Products { get; set; } = new();
 
