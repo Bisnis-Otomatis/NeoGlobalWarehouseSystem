@@ -9,5 +9,13 @@
 <h1>You are authenticated</h1>
 
 <AuthorizeView>
-    Hello @context.User.Identity?.Name!
+    @{
+        // grab the NameIdentifier claim (this is usually the user's primary key)
+        var userId = @context.User
+        .FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
+        ?.Value;
+    }
+    Hello @context.User.Identity?.Name! @userId
+
+
 </AuthorizeView>

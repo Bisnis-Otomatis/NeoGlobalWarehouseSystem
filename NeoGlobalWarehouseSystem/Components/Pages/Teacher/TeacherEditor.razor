@@ -1,0 +1,48 @@
+﻿<MudPaper Class="pa-5 ma-1" Elevation="3">
+    <MudStack Spacing="3">
+        <MudTextField @bind-Value="Name" Label="Teacher Name" Required="true" />
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="ReturnTeacher">
+            @ButtonName
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public Data.ApplicationDb.Teacher? Teacher { get; set; }
+
+    [Parameter]
+    public string ButtonName { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<Data.ApplicationDb.Teacher> ProcessedTeacher { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (Teacher == null)
+            Teacher = new();
+        else
+            Name = Teacher.Name;
+    }
+
+    public async Task ReturnTeacher()
+    {
+        if (Teacher is null)
+            return;
+
+        Teacher.Name = Name.Trim();
+        await ProcessedTeacher.InvokeAsync(Teacher);
+
+        ResetFields();
+    }
+
+    void ResetFields()
+    {
+        Teacher = new();
+        Name = string.Empty;
+    }
+}

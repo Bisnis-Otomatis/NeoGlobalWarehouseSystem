@@ -1,0 +1,14 @@
+﻿@using System.Globalization
+@page "/point-of-sales"
+
+<MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
+    <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary">Add Transaction</MudButton>
+    <MudStack Spacing="3">
+        <MudTextField @bind-Value=CustomerName Label="Customer Name"></MudTextField>
+        <MudDatePicker Label="Transaction Date" @bind-Date="_date" ShowToolbar="false"/>
+    </MudStack>
+</MudContainer>
+@code {
+    public string CustomerName = string.Empty;
+    private DateTime? _date = DateTime.Today;
+}

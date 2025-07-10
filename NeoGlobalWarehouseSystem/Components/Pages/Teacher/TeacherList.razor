@@ -1,0 +1,132 @@
+﻿@using System.Globalization
+@inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
+@inject ISnackbar Snackbar
+
+<MudTextField @bind-Value="SearchKeyword"
+              Variant="Variant.Outlined"
+              Class="mt-3"
+              Label="Search Teacher"
+              Immediate="true" />
+
+<MudDataGrid Items="@Teachers"
+             Dense="true"
+             Hover="true"
+             QuickFilter="PerformSearch">
+    <Columns>
+        <PropertyColumn Property="x => x.Id" Title="ID" />
+        <PropertyColumn Property="x => x.Name" Title="Name" />
+
+        <TemplateColumn Title="Action">
+            <CellTemplate>
+                <MudStack Row Spacing="0">
+                    <MudIconButton Size="Size.Small"
+                                   Icon="@Icons.Material.Filled.Edit"
+                                   OnClick="x => OpenEditDialog(context.Item)" />
+                    <MudIconButton Size="Size.Small"
+                                   Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   OnClick="x => OpenDeleteDialog(context.Item)" />
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+<MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
+    <DialogContent>
+        <TeacherEditor Teacher="TeacherToEdit"
+                       ButtonName="Update Teacher"
+                       ProcessedTeacher="UpdateTeacher" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text"
+                   OnClick="() => EditDialogVisible = false">
+            Cancel
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="DeleteDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Teacher?</MudText>
+    </TitleContent>
+    <DialogContent>
+        Are you sure you want to delete <b>@TeacherToDelete.Name</b> (ID: @TeacherToDelete.Id)?
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Error"
+                   OnClick="async () => await DeleteTeacher(TeacherToDelete.Id)">
+            Delete
+        </MudButton>
+        <MudButton Variant="Variant.Text"
+                   OnClick="() => DeleteDialogVisible = false">
+            Cancel
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    string SearchKeyword { get; set; } = string.Empty;
+    List<Data.ApplicationDb.Teacher> Teachers { get; set; } = new();
+
+    bool EditDialogVisible { get; set; }
+    Data.ApplicationDb.Teacher TeacherToEdit { get; set; } = new();
+
+    bool DeleteDialogVisible { get; set; }
+    Data.ApplicationDb.Teacher TeacherToDelete { get; set; } = new();
+
+    public bool PerformSearch(Data.ApplicationDb.Teacher teacher)
+    {
+        if (string.IsNullOrWhiteSpace(SearchKeyword))
+            return true;
+
+        return teacher.Name.Contains(SearchKeyword, StringComparison.InvariantCultureIgnoreCase);
+    }
+
+    public void OpenEditDialog(Data.ApplicationDb.Teacher teacher)
+    {
+        TeacherToEdit = teacher;
+        EditDialogVisible = true;
+    }
+
+    public async Task UpdateTeacher(Data.ApplicationDb.Teacher teacher)
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        await db.Teachers
+                .Where(t => t.Id == teacher.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Name, teacher.Name));
+
+        EditDialogVisible = false;
+        Snackbar.Add("Teacher has been successfully updated", Severity.Success);
+        await FetchTeachers();
+    }
+
+    public void OpenDeleteDialog(Data.ApplicationDb.Teacher teacher)
+    {
+        TeacherToDelete = teacher;
+        DeleteDialogVisible = true;
+    }
+
+    public async Task DeleteTeacher(int id)
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        await db.Teachers.Where(t => t.Id == id).ExecuteDeleteAsync();
+
+        DeleteDialogVisible = false;
+        Snackbar.Add("Teacher has been successfully deleted", Severity.Success);
+        await FetchTeachers();
+    }
+
+    public async Task FetchTeachers()
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        Teachers = await db.Teachers.OrderBy(t => t.Name).ToListAsync();
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchTeachers();
+    }
+}

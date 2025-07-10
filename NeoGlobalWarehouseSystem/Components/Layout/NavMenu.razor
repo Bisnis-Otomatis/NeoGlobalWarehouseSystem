@@ -1,13 +1,32 @@
-﻿<MudPaper Width="250px" Elevation="0" Class="py-3">
+﻿@inject NavigationManager NavigationManager
+
+<MudPaper Width="250px" Elevation="0" Class="py-3">
     <MudNavMenu Color="Color.Info">
-         <MudNavLink Href="/dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-         <MudNavLink Href="/product" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AddToQueue">Product</MudNavLink>
-        <MudNavLink Href="/teacher" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Badge">Teacher</MudNavLink>
-       <MudNavLink Href="/point-of-sales" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">Point of Sales</MudNavLink>
-       <MudNavLink Href="/supply-request" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AddShoppingCart">Supply Request</MudNavLink>
-        <MudNavLink Href="/transaction" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ContentPaste">Transaction</MudNavLink>
-        <MudNavLink Href="/report" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dataset">Report</MudNavLink>
-        <MudNavLink Href="/users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AdminPanelSettings">Admin</MudNavLink>
-        <MudNavLink Href="/security" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Logout">Logout</MudNavLink>
+        <AuthorizeView>
+            <NotAuthorized>
+                <MudNavLink Href="/Account/Login" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Login">Login</MudNavLink>
+            </NotAuthorized>
+            <Authorized>
+                <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+                <MudNavLink Href="/product" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AddToQueue">Product</MudNavLink>
+                <MudNavLink Href="/teacher" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Badge">Teacher</MudNavLink>
+                <MudNavLink Href="/point-of-sales" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">Point of Sales</MudNavLink>
+                <MudNavLink Href="/supply-request" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AddShoppingCart">Supply Request</MudNavLink>
+                <MudNavLink Href="/transaction" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ContentPaste">Transaction</MudNavLink>
+                <MudNavLink Href="/report" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dataset">Report</MudNavLink>
+                <MudNavLink Href="/users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AdminPanelSettings">Admin</MudNavLink>
+                <MudNavLink Href="/auth" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AdminPanelSettings">Auth</MudNavLink>
+                <form action="Account/Logout" method="post">
+                    <AntiforgeryToken />
+                    
+                    <MudButton StartIcon="@Icons.Material.Filled.Logout" name="ReturnUrl"
+                               Class="mud-nav-link ms-2"
+                               ButtonType="ButtonType.Submit"
+                               Variant="Variant.Text">
+                        Logout
+                    </MudButton>
+                </form>
+            </Authorized>
+        </AuthorizeView>
     </MudNavMenu>
 </MudPaper>
