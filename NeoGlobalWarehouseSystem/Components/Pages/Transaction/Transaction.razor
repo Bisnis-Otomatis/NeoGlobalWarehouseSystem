@@ -8,7 +8,7 @@
 <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
     <MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product" Immediate="true"></MudTextField>
     <MudSwitch @bind-Value="IsShorterTable" Label="Show in detail" Color="Color.Primary" />
-    <MudDataGrid Items="@Transactions" class="mt-5">
+    <MudDataGrid Items="@Transactions" class="mt-5" Dense="true" Hover="true" QuickFilter="PerformSearch">
         <Columns>
             <PropertyColumn Property="x => x.Id" Title="ID" />
             <PropertyColumn Property="x => x.IsTeacher" Title="Customer Types">
@@ -17,7 +17,7 @@
                     {
                         <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
                             <MudIcon Icon="@Icons.Material.Filled.Person" />
-                            @("Teacher")
+                            @("Teacher") (@context.Item.TeacherName)
                         </MudStack>
                     }
                     else
@@ -33,8 +33,70 @@
             <PropertyColumn Property="x => x.TransactionProductTotalPrice" Title="Total Price" />
             <PropertyColumn Property="x => x.ProcessedByName" Title="Processed by" />
             <PropertyColumn Property="x => x.TimeStamp" Title="Time" />
+            <TemplateColumn Title="">
+                <CellTemplate>
+                    <MudStack Row Spacing="0">
+                        <MudIconButton Size="Size.Small"
+                                       Icon="@Icons.Material.Filled.ViewInAr"
+                                       OnClick="x => OpenViewDialog(context.Item)"/>
+                        <MudIconButton Size="Size.Small"
+                                       Icon="@Icons.Material.Filled.Edit"
+                                        />
+                        <MudIconButton Size="Size.Small"
+                                       Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       OnClick="x => OpenDeleteDialog(context.Item)" />
+                    </MudStack>
+                </CellTemplate>
+            </TemplateColumn>
         </Columns>
     </MudDataGrid>
+
+    <MudDialog @bind-Visible="OpenDialogVisible" MaxWidth="MaxWidth.Small">
+        <DialogContent>
+            
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text"
+                       OnClick="() => OpenDialogVisible = false">
+                Cancel
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    <MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
+        <DialogContent>
+    @*         <TeacherEditor Teacher="TeacherToEdit"
+                           ButtonName="Update Teacher"
+                           ProcessedTeacher="UpdateTeacher" /> *@
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text"
+                       OnClick="() => EditDialogVisible = false">
+                Cancel
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    <MudDialog @bind-Visible="DeleteDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
+        <TitleContent>
+            <MudText Typo="Typo.h6">Delete Teacher?</MudText>
+        </TitleContent>
+        <DialogContent>
+            Are you sure you want to delete <b>@TransactionToDelete.Id</b>?
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Error"
+                       OnClick="async () => await DeleteTransaction(TransactionToDelete.Id)">
+                Delete
+            </MudButton>
+            <MudButton Variant="Variant.Text"
+                       OnClick="() => DeleteDialogVisible = false">
+                Cancel
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
 </MudContainer>
 
 
@@ -42,11 +104,42 @@
     bool IsShorterTable { get; set; } = false;
 
     string SearchKeyword { get; set; } = string.Empty;
+
+    bool OpenDialogVisible { get; set; }
+    TransactionDTO TransactionToOpen { get; set; } = new();
+    List<TransactionProduct> TransactionProducts { get; set; } = new();
+
+    bool EditDialogVisible { get; set; }
+    TransactionDTO TransactionToEdit { get; set; } = new();
+
+    bool DeleteDialogVisible { get; set; }
+    TransactionDTO TransactionToDelete { get; set; } = new();
+
     List<TransactionDTO> Transactions { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
         await FetchTransactions();
+    }
+
+    public bool PerformSearch(TransactionDTO transaction)
+    {
+        if (SearchKeyword == "")
+        {
+            return true;
+        }
+        var searchString = $"{transaction.Id} {(transaction.IsTeacher ? "teacher" : "")} {transaction.TeacherName} {transaction.TransactionProductCount} {"Rp. " + transaction.TransactionProductTotalPrice.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))} {transaction.ProcessedByName} {transaction.TimeStamp}".ToLowerInvariant();
+
+        var searchKeywords = SearchKeyword.ToLowerInvariant().Split(" ");
+        int countMatch = 0;
+        foreach (var keyword in searchKeywords)
+        {
+            if (searchString.Contains(keyword))
+            {
+                countMatch++;
+            }
+        }
+        return countMatch == searchKeywords.Length; //if all match, return product
     }
 
     public async Task FetchTransactions()
@@ -74,5 +167,27 @@
         public long TransactionProductTotalPrice { get; set; }
         public string ProcessedByName { get; set; } = "";
         public DateTime TimeStamp { get; set; }
+    }
+
+    public void OpenViewDialog(TransactionDTO transaction)
+    {
+        
+    }
+
+    public void OpenDeleteDialog(TransactionDTO transaction)
+    {
+        TransactionToDelete = transaction;
+        DeleteDialogVisible = true;
+    }
+
+    public async Task DeleteTransaction(int id)
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        await db.TransactionProducts.Where(t => t.TransactionId == id).ExecuteDeleteAsync();
+        await db.Transactions.Where(t => t.Id == id).ExecuteDeleteAsync();
+
+        DeleteDialogVisible = false;
+        Snackbar.Add("Transaction has been successfully deleted", Severity.Success);
+        await FetchTransactions();
     }
 }

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NeoGlobalWarehouseSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250703121007_InitialMigration")]
+    [Migration("20250717105841_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -251,9 +251,6 @@ namespace NeoGlobalWarehouseSystem.Migrations
 
                     b.Property<DateTime>("TimeStamp")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<long>("TotalPrice")
-                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 

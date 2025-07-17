@@ -35,7 +35,7 @@
         await db.Transactions.AddAsync(new ()
         {
             ProcessedById = intUserId,
-            TeacherId = 2, // karena yg beli guru, kalau yg beli yg lain, teacherId = null
+            TeacherId = 1, // karena yg beli guru, kalau yg beli yg lain, teacherId = null
             TransactionProducts = products.Select(x => new TransactionProduct() {
                     ProductId = x.Id,
                     Name = x.Name,

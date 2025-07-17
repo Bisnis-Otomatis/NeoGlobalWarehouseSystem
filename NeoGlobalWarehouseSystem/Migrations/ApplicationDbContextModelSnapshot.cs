@@ -249,9 +249,6 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     b.Property<DateTime>("TimeStamp")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<long>("TotalPrice")
-                        .HasColumnType("bigint");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ProcessedById");
