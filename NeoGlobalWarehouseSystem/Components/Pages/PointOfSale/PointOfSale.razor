@@ -1,14 +1,52 @@
 ﻿@using System.Globalization
+@inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @page "/point-of-sales"
 
-<MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
-    <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary">Add Transaction</MudButton>
-    <MudStack Spacing="3">
-        <MudTextField @bind-Value=CustomerName Label="Customer Name"></MudTextField>
-        <MudDatePicker Label="Transaction Date" @bind-Date="_date" ShowToolbar="false"/>
-    </MudStack>
-</MudContainer>
+<AuthorizeView>
+    @{
+        // grab the NameIdentifier claim (this is usually the user's primary key)
+        var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
+        <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary">Add Transaction</MudButton>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value=CustomerName Label="Customer Name"></MudTextField>
+            <MudDatePicker Label="Transaction Date" @bind-Date="_date" ShowToolbar="false" />
+        </MudStack>
+    </MudContainer>
+
+    <MudButton OnClick="async () => { if (userId != null) await AddNewTransactionDemo(userId); }">Tambahkan Transaksi Demo</MudButton>
+</AuthorizeView>
+
 @code {
     public string CustomerName = string.Empty;
     private DateTime? _date = DateTime.Today;
+
+    public async Task AddNewTransactionDemo(string userId)
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+
+        int intUserId = int.Parse(userId);
+
+        // Simulasi user beli masing-masing product sebanyak 3 buah dari seluruh item di koperasi sekolah
+        var products = await db.Products.ToListAsync();
+
+        await db.Transactions.AddAsync(new ()
+        {
+            ProcessedById = intUserId,
+            TeacherId = 2, // karena yg beli guru, kalau yg beli yg lain, teacherId = null
+            TransactionProducts = products.Select(x => new TransactionProduct() {
+                    ProductId = x.Id,
+                    Name = x.Name,
+                    Barcode = x.Barcode,
+                    Price = x.Price,
+                    Quantity = 3
+                }).ToList()
+        });
+
+        await db.Products.ExecuteUpdateAsync(setter => setter.SetProperty(x => x.Quantity, x => x.Quantity - 3));
+
+        await db.SaveChangesAsync();
+    }
 }

@@ -14,7 +14,6 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
         public int? TeacherId { get; set; }
 
         public DateTime TimeStamp { get; set; } = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
-        public long TotalPrice { get; set; }
         public List<TransactionProduct> TransactionProducts { get; set; } = new();
     }
 }

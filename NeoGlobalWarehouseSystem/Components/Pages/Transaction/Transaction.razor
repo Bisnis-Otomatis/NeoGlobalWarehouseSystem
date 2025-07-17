@@ -1,0 +1,78 @@
+﻿@page "/transaction"
+
+@using System.Globalization
+@inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
+@inject ISnackbar Snackbar
+@using TransactionData = NeoGlobalWarehouseSystem.Data.ApplicationDb.Transaction
+
+<MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
+    <MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product" Immediate="true"></MudTextField>
+    <MudSwitch @bind-Value="IsShorterTable" Label="Show in detail" Color="Color.Primary" />
+    <MudDataGrid Items="@Transactions" class="mt-5">
+        <Columns>
+            <PropertyColumn Property="x => x.Id" Title="ID" />
+            <PropertyColumn Property="x => x.IsTeacher" Title="Customer Types">
+                <CellTemplate>
+                    @if (context.Item.IsTeacher)
+                    {
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" />
+                            @("Teacher")
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.People" />
+                            @("Buyer")
+                        </MudStack>
+                    }
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.TransactionProductCount" Title="Total Products" />
+            <PropertyColumn Property="x => x.TransactionProductTotalPrice" Title="Total Price" />
+            <PropertyColumn Property="x => x.ProcessedByName" Title="Processed by" />
+            <PropertyColumn Property="x => x.TimeStamp" Title="Time" />
+        </Columns>
+    </MudDataGrid>
+</MudContainer>
+
+
+@code {
+    bool IsShorterTable { get; set; } = false;
+
+    string SearchKeyword { get; set; } = string.Empty;
+    List<TransactionDTO> Transactions { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchTransactions();
+    }
+
+    public async Task FetchTransactions()
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        Transactions = await db.Transactions.Select(x => new TransactionDTO
+                {
+                    Id = x.Id,
+                    IsTeacher = (x.TeacherId != null),
+                    TeacherName = x.Teacher != null ? x.Teacher.Name : string.Empty,
+                    TransactionProductCount = x.TransactionProducts.Count,
+                    TransactionProductTotalPrice = x.TransactionProducts.Sum(x => x.Price * x.Quantity),
+                    ProcessedByName = x.ProcessedBy.Name,
+                    TimeStamp = x.TimeStamp
+                }).ToListAsync();
+        StateHasChanged();
+    }
+
+    public class TransactionDTO
+    {
+        public int Id { get; set; }
+        public bool IsTeacher { get; set; }
+        public string TeacherName { get; set; } = "";
+        public int TransactionProductCount { get; set; }
+        public long TransactionProductTotalPrice { get; set; }
+        public string ProcessedByName { get; set; } = "";
+        public DateTime TimeStamp { get; set; }
+    }
+}
