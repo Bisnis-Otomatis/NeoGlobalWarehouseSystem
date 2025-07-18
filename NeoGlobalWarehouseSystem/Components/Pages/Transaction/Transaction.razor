@@ -30,8 +30,20 @@
                 </CellTemplate>
             </PropertyColumn>
             <PropertyColumn Property="x => x.TransactionProductCount" Title="Total Products" />
-            <PropertyColumn Property="x => x.TransactionProductTotalPrice" Title="Total Price" />
-            <PropertyColumn Property="x => x.ProcessedByName" Title="Processed by" />
+            <PropertyColumn Property="x => x.TransactionProductTotalPrice" Title="Total Price" >
+                <CellTemplate>
+                    <img src="https://live.staticflickr.com/2912/14631730560_72b3caff70_z.jpg" jsaction="" class="sFlh5c FyHeAf iPVvYb" style="max-width: 427px; height: 639px; margin: 0px; width: 427px;" alt="Cute young Chinese girl | adamba100 | Flickr" jsname="kn3ccd">
+@*                     @if (context.Item.IsTeacher == true)
+                    {
+                        
+                    }
+                    else
+                    {
+                        @("Rp. " + context.Item.TransactionProductTotalPrice.ToString("N0", CultureInfo.GetCultureInfo("id-ID")))
+                    } *@
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.ProcessedByName" Title="Processed by"/>
             <PropertyColumn Property="x => x.TimeStamp" Title="Time" />
             <TemplateColumn Title="">
                 <CellTemplate>
