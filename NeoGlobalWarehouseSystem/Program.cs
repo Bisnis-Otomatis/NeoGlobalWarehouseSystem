@@ -20,6 +20,8 @@ namespace NeoGlobalWarehouseSystem
                 .AddInteractiveServerComponents();
 
             builder.Services.AddMudServices();
+            builder.Services.AddHttpClient();
+            builder.Services.AddControllers();
 
             builder.Services.AddCascadingAuthenticationState();
             builder.Services.AddScoped<IdentityUserAccessor>();
@@ -63,6 +65,7 @@ namespace NeoGlobalWarehouseSystem
 
             app.UseStaticFiles();
             app.UseAntiforgery();
+            app.MapControllers();
 
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode();

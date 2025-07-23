@@ -1,0 +1,97 @@
+﻿@page "/report"
+
+@using System.Globalization
+@inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
+@inject ISnackbar Snackbar
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<MudPaper Class="pa-4 mt-4">
+    <MudStack Spacing="2">
+        <MudAutocomplete T="string" Label="Report For" @bind-Value="SelectedReportType" 
+                         SearchFunc="SearchReportType" ToStringFunc="x => x" 
+                         ResetValueOnEmptyText="true" Dense="true" />
+        <MudSelect T="int" Label="Month" @bind-Value="SelectedMonth">
+            @foreach (var month in AvailableMonths)
+            {
+                <MudSelectItem Value="@month.Value">@month.Key</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="int" Label="Year" @bind-Value="SelectedYear">
+            @foreach (var year in AvailableYears)
+            {
+                <MudSelectItem Value="@year">@year</MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="DownloadReport" Disabled="@(string.IsNullOrEmpty(SelectedReportType) || SelectedMonth == 0 || SelectedYear == 0)">
+            Download PDF
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string? SelectedReportType;
+    private int SelectedMonth = 0;
+    private int SelectedYear = 0;
+    private List<string> ReportTypes = new() { "Customer", "Teacher" };
+    private Dictionary<string, int> AvailableMonths = new();
+    private List<int> AvailableYears = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAvailableMonthsAndYears();
+    }
+
+    private async Task LoadAvailableMonthsAndYears()
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        var transactions = await db.Transactions.ToListAsync();
+        var months = transactions
+            .Select(x => new { x.TimeStamp.Year, x.TimeStamp.Month })
+            .Distinct()
+            .OrderByDescending(x => x.Year).ThenByDescending(x => x.Month)
+            .ToList();
+        AvailableMonths = months
+            .GroupBy(x => x.Month)
+            .ToDictionary(
+                g => CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(g.Key),
+                g => g.Key
+            );
+        AvailableYears = months.Select(x => x.Year).Distinct().OrderByDescending(x => x).ToList();
+        if (AvailableMonths.Any())
+            SelectedMonth = AvailableMonths.First().Value;
+        if (AvailableYears.Any())
+            SelectedYear = AvailableYears.First();
+    }
+
+    private Task<IEnumerable<string>> SearchReportType(string value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(ReportTypes.AsEnumerable());
+        return Task.FromResult(ReportTypes.Where(x => x.Contains(value, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private async Task DownloadReport()
+    {
+        if (string.IsNullOrEmpty(SelectedReportType) || SelectedMonth == 0 || SelectedYear == 0)
+        {
+            Snackbar.Add("Please select report type, month, and year", Severity.Warning);
+            return;
+        }
+        var url = new Uri(new Uri(NavigationManager.BaseUri), $"api/report/download?type={SelectedReportType}&month={SelectedMonth}&year={SelectedYear}").ToString();
+        var response = await Http.GetAsync(url);
+        if (response.IsSuccessStatusCode)
+        {
+            var bytes = await response.Content.ReadAsByteArrayAsync();
+            var fileName = $"Report_{SelectedReportType}_{SelectedYear}_{SelectedMonth}.pdf";
+            await JS.InvokeVoidAsync("BlazorDownloadFile", fileName, "application/pdf", bytes);
+        }
+        else
+        {
+            Snackbar.Add("Failed to download report", Severity.Error);
+        }
+    }
+
+    [Inject]
+    public IJSRuntime JS { get; set; } = default!;
+}

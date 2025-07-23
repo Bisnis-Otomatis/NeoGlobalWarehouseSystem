@@ -4,10 +4,10 @@
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @inject ISnackbar Snackbar
 @using TransactionData = NeoGlobalWarehouseSystem.Data.ApplicationDb.Transaction
+@using NeoGlobalWarehouseSystem.Data.ApplicationDb
 
 <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
     <MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product" Immediate="true"></MudTextField>
-    <MudSwitch @bind-Value="IsShorterTable" Label="Show in detail" Color="Color.Primary" />
     <MudDataGrid Items="@Transactions" class="mt-5" Dense="true" Hover="true" QuickFilter="PerformSearch">
         <Columns>
             <PropertyColumn Property="x => x.Id" Title="ID" />
@@ -48,20 +48,23 @@
                     } 
                 </CellTemplate>
             </PropertyColumn>
-            <PropertyColumn Property="x => x.ProcessedByName" Title="Processed by"/>
+            <PropertyColumn Property="x => x.ProcessedByName" Title="Processed by">
+                <CellTemplate>
+                    @context.Item.ProcessedByName
+                </CellTemplate>
+            </PropertyColumn>
             <PropertyColumn Property="x => x.TimeStamp" Title="Time" />
             <TemplateColumn Title="">
                 <CellTemplate>
                     <MudStack Row Spacing="0">
-                        <MudIconButton Size="Size.Small"
+                        <MudIconButton Size="Size.Small" Color="Color.Primary"
                                        Icon="@Icons.Material.Filled.ViewInAr"
-                                       OnClick="x => OpenViewDialog(context.Item)"/>
+                                       OnClick="x => OpenViewDialog(context.Item)"/> @* View Button *@
                         <MudIconButton Size="Size.Small"
                                        Icon="@Icons.Material.Filled.Edit"
-                                        />
+                                       OnClick="x => OpenEditDialog(context.Item)" /> @* Edit Button *@
                         <MudIconButton Size="Size.Small"
                                        Icon="@Icons.Material.Filled.Delete"
-                                       Color="Color.Error"
                                        OnClick="x => OpenDeleteDialog(context.Item)" />
                     </MudStack>
                 </CellTemplate>
@@ -69,25 +72,130 @@
         </Columns>
     </MudDataGrid>
 
-    <MudDialog @bind-Visible="OpenDialogVisible" MaxWidth="MaxWidth.Small">
+    <!-- View Dialog -->
+    <MudDialog @bind-Visible="OpenDialogVisible" Options="new DialogOptions { MaxWidth = MaxWidth.Large }">
         <DialogContent>
-            
+            <MudText Typo="Typo.h6">Transaction Products</MudText>
+            <MudDataGrid Items="@ViewDialogProducts" Dense="true" Class="mt-2">
+                <Columns>
+                    <PropertyColumn Property="x => x.Name" Title="Product Name" />
+                    <PropertyColumn Property="x => x.Quantity" Title="Quantity" />
+                    @if (!TransactionToOpen.IsTeacher)
+                    {
+                        <PropertyColumn Property="x => x.Price" Title="Price">
+                            <CellTemplate Context="ctx">
+                                Rp. @ctx.Item.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))
+                            </CellTemplate>
+                        </PropertyColumn>
+                        <PropertyColumn Property="@(x => x.Price * x.Quantity)" Title="Total Price">
+                            <CellTemplate Context="ctx">
+                                Rp. @( (ctx.Item.Price * ctx.Item.Quantity).ToString("N0", CultureInfo.GetCultureInfo("id-ID")) )
+                            </CellTemplate>
+                        </PropertyColumn>
+                    }
+                </Columns>
+            </MudDataGrid>
+            @if (!TransactionToOpen.IsTeacher)
+            {
+                <MudStack Row AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Class="mt-3">
+                    <MudText Typo="Typo.h6">Total:</MudText>
+                    <MudText Typo="Typo.h6">Rp. @ViewDialogProducts.Sum(x => x.Price * x.Quantity).ToString("N0", CultureInfo.GetCultureInfo("id-ID"))</MudText>
+                </MudStack>
+            }
         </DialogContent>
         <DialogActions>
             <MudButton Variant="Variant.Text"
                        OnClick="() => OpenDialogVisible = false">
-                Cancel
+                Close
             </MudButton>
         </DialogActions>
     </MudDialog>
 
-    <MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
+    <!-- Edit Dialog -->
+    <MudDialog @bind-Visible="EditDialogVisible" Options="new DialogOptions { MaxWidth = MaxWidth.Large }">
         <DialogContent>
-    @*         <TeacherEditor Teacher="TeacherToEdit"
-                           ButtonName="Update Teacher"
-                           ProcessedTeacher="UpdateTeacher" /> *@
+            <MudText Typo="Typo.h6">Edit Transaction Products</MudText>
+            <MudAutocomplete T="Product" Label="Cari Produk" @bind-Value="EditProductSelected"
+                             SearchFunc="@EditSearch" ToStringFunc="x => x.Name" Class="mt-3" />
+            @if (EditProductSelected != null)
+            {
+                <MudCard Class="mt-1">
+                    <MudCardContent>
+                        <MudText>@EditProductSelected.Name</MudText>
+                        <MudText Typo="Typo.body2">Quantity: @EditProductSelected.Quantity</MudText>
+                        <MudText Typo="Typo.body2">Price: Rp. @EditProductSelected.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))</MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudStack Row>
+                            <MudNumericField Style="width:100px;" Variant="Variant.Outlined" @bind-Value="EditQuantityToOrder" Min="0" Max="@EditProductSelected.Quantity"></MudNumericField>
+                            <MudButton Variant="Variant.Text" Disabled="@(EditQuantityToOrder == 0 || EditProductSelected.Quantity == 0 || EditQuantityToOrder == null || EditQuantityToOrder > EditProductSelected.Quantity)" OnClick="AddToEditCart" Color="Color.Primary" >Add to Cart</MudButton>
+                        </MudStack>
+                    </MudCardActions>
+                </MudCard>
+            }
+            <MudDivider />
+            <MudDataGrid Items="@EditCart" Class="mt-2" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
+                    <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>
+                    <PropertyColumn Property="x => x.Product.Price" Title="Price">
+                        <CellTemplate Context="priceContext">
+                            Rp. @priceContext.Item.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))
+                        </CellTemplate>
+                    </PropertyColumn>
+                    <PropertyColumn Property="@(x => x.Product.Price * x.Quantity)" Title="Total Price">
+                        <CellTemplate Context="totalPriceContext">
+                            Rp. @((totalPriceContext.Item.Product.Price * totalPriceContext.Item.Quantity).ToString("N0", CultureInfo.GetCultureInfo("id-ID")))
+                        </CellTemplate>
+                    </PropertyColumn>
+                    <TemplateColumn Title="Action">
+                        <CellTemplate Context="actionContext">
+                            <MudStack Row Spacing="0">
+                                <MudIconButton Size="Size.Small"
+                                               Icon="@Icons.Material.Filled.Edit"
+                                               OnClick="@(() => OpenEditCartDialog(actionContext.Item))" />
+                                <MudIconButton Size="Size.Small"
+                                               Icon="@Icons.Material.Filled.Delete"
+                                               Color="Color.Error"
+                                               OnClick="@(() => OpenDeleteCartDialog(actionContext.Item))" />
+                            </MudStack>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+            <MudDialog @bind-Visible="EditCartDialogVisible" MaxWidth="MaxWidth.Small">
+                <DialogContent>
+                    <MudText Typo="Typo.h6">Edit Quantity for @EditCartItemToEdit?.Product.Name</MudText>
+                    <MudNumericField @bind-Value="EditNewQuantity" Min="1" Max="@EditMaxEditableQuantity"
+                                     Label="New Quantity" Style="width:100%;" />
+                </DialogContent>
+                <DialogActions>
+                    <MudButton Variant="Variant.Filled" OnClick="UpdateEditCartItem">Update</MudButton>
+                    <MudButton Variant="Variant.Text" OnClick="() => EditCartDialogVisible = false">Cancel</MudButton>
+                </DialogActions>
+            </MudDialog>
+            <MudDialog @bind-Visible="DeleteCartDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
+                <TitleContent>
+                    <MudText Typo="Typo.h6">Delete Product?</MudText>
+                </TitleContent>
+                <DialogContent>
+                    Are you sure you want to remove <b>@EditCartItemToDelete?.Product.Name</b> from the cart?
+                </DialogContent>
+                <DialogActions>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Error"
+                               OnClick="DeleteEditCartItem">
+                        Delete
+                    </MudButton>
+                    <MudButton Variant="Variant.Text"
+                               OnClick="() => DeleteCartDialogVisible = false">
+                        Cancel
+                    </MudButton>
+                </DialogActions>
+            </MudDialog>
         </DialogContent>
         <DialogActions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveEditTransaction">Save</MudButton>
             <MudButton Variant="Variant.Text"
                        OnClick="() => EditDialogVisible = false">
                 Cancel
@@ -118,16 +226,24 @@
 
 
 @code {
-    bool IsShorterTable { get; set; } = false;
-
     string SearchKeyword { get; set; } = string.Empty;
 
     bool OpenDialogVisible { get; set; }
     TransactionDTO TransactionToOpen { get; set; } = new();
-    List<TransactionProduct> TransactionProducts { get; set; } = new();
+    List<TransactionProduct> ViewDialogProducts { get; set; } = new();
 
     bool EditDialogVisible { get; set; }
     TransactionDTO TransactionToEdit { get; set; } = new();
+    List<CartItem> EditCart { get; set; } = new();
+    List<Product> EditProducts { get; set; } = new();
+    Product? EditProductSelected { get; set; } = null;
+    int? EditQuantityToOrder = null;
+    CartItem? EditCartItemToEdit { get; set; }
+    CartItem? EditCartItemToDelete { get; set; }
+    int EditNewQuantity { get; set; }
+    bool EditCartDialogVisible { get; set; } = false;
+    bool DeleteCartDialogVisible { get; set; } = false;
+    int EditMaxEditableQuantity => EditCartItemToEdit?.Product.Quantity ?? 1;
 
     bool DeleteDialogVisible { get; set; }
     TransactionDTO TransactionToDelete { get; set; } = new();
@@ -190,9 +306,124 @@
         public DateTime TimeStamp { get; set; }
     }
 
-    public void OpenViewDialog(TransactionDTO transaction)
+    public class CartItem
     {
-        
+        public Product Product = new();
+        public int Quantity;
+    }
+
+    public async void OpenViewDialog(TransactionDTO transaction)
+    {
+        TransactionToOpen = transaction;
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        var products = await db.TransactionProducts.Where(x => x.TransactionId == transaction.Id).ToListAsync();
+        ViewDialogProducts = products;
+        OpenDialogVisible = true;
+        StateHasChanged();
+    }
+
+    public async void OpenEditDialog(TransactionDTO transaction)
+    {
+        TransactionToEdit = transaction;
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        var transactionProducts = await db.TransactionProducts.Where(x => x.TransactionId == transaction.Id).ToListAsync();
+        EditCart = transactionProducts.Select(tp => new CartItem { Product = db.Products.FirstOrDefault(p => p.Id == tp.ProductId) ?? new Product(), Quantity = tp.Quantity }).ToList();
+        EditProducts = await db.Products.ToListAsync();
+        EditProductSelected = null;
+        EditQuantityToOrder = null;
+        EditDialogVisible = true;
+        StateHasChanged();
+    }
+
+    public async Task<IEnumerable<Product>> EditSearch(string value, CancellationToken token)
+    {
+        await Task.CompletedTask;
+        EditQuantityToOrder = null;
+        if (string.IsNullOrWhiteSpace(value)) return EditProducts;
+        return EditProducts.Where(x => x.Name.ToUpper().StartsWith(value.ToUpper()));
+    }
+
+    public void AddToEditCart()
+    {
+        if (EditProductSelected != null && EditQuantityToOrder != null)
+        {
+            bool isFound = false;
+            for (int i = 0; i < EditCart.Count; i++)
+            {
+                var cart = EditCart[i];
+                if (cart.Product.Id == EditProductSelected.Id)
+                {
+                    cart.Quantity += EditQuantityToOrder.Value;
+                    if (cart.Quantity > EditProductSelected.Quantity)
+                    {
+                        cart.Quantity = EditProductSelected.Quantity;
+                    }
+                    isFound = true;
+                    break;
+                }
+            }
+            if (!isFound)
+            {
+                EditCart.Add(new CartItem { Product = EditProductSelected, Quantity = EditQuantityToOrder.Value });
+            }
+            StateHasChanged();
+        }
+    }
+
+    public void OpenEditCartDialog(CartItem item)
+    {
+        EditCartItemToEdit = item;
+        EditNewQuantity = item.Quantity;
+        EditCartDialogVisible = true;
+    }
+
+    public void OpenDeleteCartDialog(CartItem item)
+    {
+        EditCartItemToDelete = item;
+        DeleteCartDialogVisible = true;
+    }
+
+    public void UpdateEditCartItem()
+    {
+        if (EditCartItemToEdit != null)
+        {
+            EditCartItemToEdit.Quantity = Math.Min(EditNewQuantity, EditCartItemToEdit.Product.Quantity);
+        }
+        EditCartDialogVisible = false;
+    }
+
+    public void DeleteEditCartItem()
+    {
+        if (EditCartItemToDelete != null)
+        {
+            EditCart.Remove(EditCartItemToDelete);
+        }
+        DeleteCartDialogVisible = false;
+    }
+
+    public async void SaveEditTransaction()
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        // Hapus produk lama
+        var oldProducts = db.TransactionProducts.Where(x => x.TransactionId == TransactionToEdit.Id);
+        db.TransactionProducts.RemoveRange(oldProducts);
+        // Tambahkan produk baru
+        foreach (var cart in EditCart)
+        {
+            db.TransactionProducts.Add(new TransactionProduct
+            {
+                TransactionId = TransactionToEdit.Id,
+                ProductId = cart.Product.Id,
+                Name = cart.Product.Name,
+                Barcode = cart.Product.Barcode,
+                Price = cart.Product.Price,
+                Quantity = cart.Quantity
+            });
+        }
+        await db.SaveChangesAsync();
+        Snackbar.Add("Transaction updated successfully", Severity.Success);
+        EditDialogVisible = false;
+        await FetchTransactions();
     }
 
     public void OpenDeleteDialog(TransactionDTO transaction)
