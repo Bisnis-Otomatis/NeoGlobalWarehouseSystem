@@ -2,58 +2,225 @@
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @page "/point-of-sales"
 
-<AuthorizeView>
-    @{
-        // grab the NameIdentifier claim (this is usually the user's primary key)
-        var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    }
+<MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
+    <AuthorizeView>
+        @{
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        }
 
-    <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
-        <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary">Add Transaction</MudButton>
-        <MudStack Spacing="3">
-            <MudTextField @bind-Value=CustomerName Label="Customer Name"></MudTextField>
-            <MudSelect T="string" Label="Search" AnchorOrigin="Origin.CenterLeft" TransformOrigin="Origin.CenterRight" Variant="Variant.Outlined" AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary">
-                <MudSelectItem Value="@("Foo")">Foo</MudSelectItem>
-                <MudSelectItem Value="@("bar")">Bar</MudSelectItem>
-            </MudSelect>
-            <MudNumericField @bind-Value="Quantity" Label="Quantity" Min="0"></MudNumericField>
-            <MudDatePicker Label="Transaction Date" @bind-Date="_date" ShowToolbar="false" />
+
+@*         <MudStack Row AlignItems="AlignItems.Center">
+            <MudText>For </MudText>
+            <MudRadioGroup T="bool" @bind-Value="IsForTeacher">
+                <MudRadio Value="true" Color="Color.Primary">Teacher</MudRadio>
+                <MudRadio Value="false" Color="Color.Secondary">Students, Parents, etc.</MudRadio>
+            </MudRadioGroup>
+        </MudStack> *@
+
+        <MudTextField @bind-Value="CustomerName" T="string" Variant="Variant.Text" Label="Customer Name"/>
+
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-3">
+            <MudIcon Icon="@Icons.Material.Filled.AddBox" /> <MudText Typo="Typo.h6">Add Product</MudText>
         </MudStack>
-    </MudContainer>
 
-    <MudButton OnClick="async () => { if (userId != null) await AddNewTransactionDemo(userId); }">Tambahkan Transaksi Demo</MudButton>
-</AuthorizeView>
+        <MudAutocomplete T="Data.ApplicationDb.Product" Label="Cari Produk" @bind-Value="ProductSelected" 
+                             SearchFunc="@Search" ToStringFunc="x => x.Name" />
+        
+        @if (ProductSelected != null)
+        {
+            <MudCard>
+                <MudCardContent>
+                    <MudText>@ProductSelected.Name</MudText>
+                    <MudText Typo="Typo.body2">Quantity: @ProductSelected.Quantity</MudText>
+                    <MudText Typo="Typo.body2">Price: Rp. @ProductSelected.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudStack Row>
+                        <MudNumericField Style="width:100px;" Variant="Variant.Outlined" @bind-Value="QuantityToOrder" Min="0" Max="@ProductSelected.Quantity"></MudNumericField>
+                        <MudButton Variant="Variant.Text" Disabled="@(QuantityToOrder == 0 || ProductSelected.Quantity == 0 || QuantityToOrder == null || QuantityToOrder > ProductSelected.Quantity)" OnClick="AddToCart" Color="Color.Primary" >Add to Cart</MudButton>
+                    </MudStack>
+                </MudCardActions>
+            </MudCard>
+        }   
+        <MudDivider />
+
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-3">
+            <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" /> <MudText Typo="Typo.h6">Cart</MudText>
+        </MudStack>
+        <MudDataGrid Items="Cart">
+            <Columns>
+                <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
+                <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>
+                <PropertyColumn Property="x => x.Product.Price" Title="Price">
+                    <CellTemplate Context="priceContext">
+                        Rp. @priceContext.Item.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))
+                    </CellTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="@(x => x.Product.Price * x.Quantity)" Title="Total Price">
+                    <CellTemplate Context="totalPriceContext">
+                        Rp. @((totalPriceContext.Item.Product.Price * totalPriceContext.Item.Quantity).ToString("N0", CultureInfo.GetCultureInfo("id-ID")))
+                    </CellTemplate>
+                </PropertyColumn>
+                <TemplateColumn Title="Action">
+                    <CellTemplate Context="actionContext">
+                        @* <--- THIS IS THE KEY CHANGE *@
+                        <MudStack Row Spacing="0">
+                            <MudIconButton Size="Size.Small"
+                                           Icon="@Icons.Material.Filled.Edit"
+                                           OnClick="@(() => OpenEditDialog(actionContext.Item))" /> @* <--- USE actionContext.Item *@
+                            <MudIconButton Size="Size.Small"
+                                           Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           OnClick="@(() => OpenDeleteDialog(actionContext.Item))" /> @* <--- USE actionContext.Item *@
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudTr>
+                    <MudTd ColSpan="3" Align="Align.Right">
+                        <b>Grand Total:</b>
+                    </MudTd>
+                    <MudTd>
+                        <b>Rp. @Cart.Sum(x => x.Product.Price * x.Quantity).ToString("N0", CultureInfo.GetCultureInfo("id-ID"))</b>
+                    </MudTd>
+                </MudTr>
+            </PagerContent>
+        </MudDataGrid>
+        <MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
+    <DialogContent>
+        <MudText Typo="Typo.h6">Edit Quantity for @CartItemToEdit?.Product.Name</MudText>
+                <MudNumericField @bind-Value="NewQuantity" Min="1" Max="@MaxEditableQuantity"
+                                 Label="New Quantity" Style="width:100%;" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" OnClick="UpdateCartItem">Update</MudButton>
+        <MudButton Variant="Variant.Text" OnClick="() => EditDialogVisible = false">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="DeleteDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Product?</MudText>
+    </TitleContent>
+    <DialogContent>
+        Are you sure you want to remove <b>@CartItemToDelete?.Product.Name</b> from the cart?
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Error"
+                   OnClick="DeleteCartItem">
+            Delete
+        </MudButton>
+        <MudButton Variant="Variant.Text"
+                   OnClick="() => DeleteDialogVisible = false">
+            Cancel
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+    </AuthorizeView>
+</MudContainer>
+
 
 @code {
-    public string CustomerName = string.Empty;
-    public int? Quantity;
-    private DateTime? _date = DateTime.Today;
+    // bool IsForTeacher { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    bool EditDialogVisible { get; set; }
+    List<Data.ApplicationDb.Product> Products { get; set; } = new();
+    Data.ApplicationDb.Product? ProductSelected { get; set; } = null;
+    int? QuantityToOrder = null;
+    List<CartItem> Cart { get; set; } = new();
 
-    public async Task AddNewTransactionDemo(string userId)
+    protected async override Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    void AddToCart()
+    {
+        if (ProductSelected != null && QuantityToOrder != null)
+        {
+            bool isFound = false;
+            for (int i = 0; i < Cart.Count; i++)
+            {
+                var cart = Cart[i];
+
+                if (cart.Product.Id == ProductSelected.Id)
+                {
+                    cart.Quantity += QuantityToOrder.Value;
+
+                    // Membatasi supaya kuantitas maksimalnya hanya sebatas yang ada di stok saja
+                    if (cart.Quantity > ProductSelected.Quantity)
+                    {
+                        cart.Quantity = ProductSelected.Quantity;
+                    }
+
+                    isFound = true;
+                    break;
+                }
+            }
+            if (!isFound)
+            {
+                Cart.Add(new CartItem { Product = ProductSelected, Quantity = QuantityToOrder.Value });
+            }
+            StateHasChanged();
+        }
+    }
+
+    async Task LoadProducts()
     {
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
 
-        int intUserId = int.Parse(userId);
+        Products = await db.Products.ToListAsync();
+    }
 
-        // Simulasi user beli masing-masing product sebanyak 3 buah dari seluruh item di koperasi sekolah
-        var products = await db.Products.ToListAsync();
+    async Task<IEnumerable<Data.ApplicationDb.Product>> Search(string value, CancellationToken token)
+    {
+        await Task.CompletedTask;
+        QuantityToOrder = null;
+        return Products.Where(x => x.Name.ToUpper().StartsWith(value.ToUpper()));
+    }
 
-        await db.Transactions.AddAsync(new()
+    public class CartItem
+    {
+        public Data.ApplicationDb.Product Product = new();
+        public int Quantity;
+    }
+    CartItem? CartItemToEdit { get; set; }
+    CartItem? CartItemToDelete { get; set; }
+    int NewQuantity { get; set; }
+    bool DeleteDialogVisible { get; set; } = false;
+    int MaxEditableQuantity => CartItemToEdit?.Product.Quantity ?? 1;
+
+    void OpenEditDialog(CartItem item)
+    {
+        CartItemToEdit = item;
+        NewQuantity = item.Quantity;
+        EditDialogVisible = true;
+    }
+
+    void OpenDeleteDialog(CartItem item)
+    {
+        CartItemToDelete = item;
+        DeleteDialogVisible = true;
+    }
+
+    void UpdateCartItem()
+    {
+        if (CartItemToEdit != null)
         {
-            ProcessedById = intUserId,
-            TeacherId = 1, // karena yg beli guru, kalau yg beli yg lain, teacherId = null
-            TransactionProducts = products.Select(x => new TransactionProduct()
-            {
-                ProductId = x.Id,
-                Name = x.Name,
-                Barcode = x.Barcode,
-                Price = x.Price,
-                Quantity = 3
-            }).ToList()
-        });
+            CartItemToEdit.Quantity = Math.Min(NewQuantity, CartItemToEdit.Product.Quantity);
+        }
+        EditDialogVisible = false;
+    }
 
-        await db.Products.ExecuteUpdateAsync(setter => setter.SetProperty(x => x.Quantity, x => x.Quantity - 3));
-
-        await db.SaveChangesAsync();
+    void DeleteCartItem()
+    {
+        if (CartItemToDelete != null)
+        {
+            Cart.Remove(CartItemToDelete);
+        }
+        DeleteDialogVisible = false;
     }
 }
