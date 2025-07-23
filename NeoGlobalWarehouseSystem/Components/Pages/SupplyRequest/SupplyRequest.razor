@@ -1,0 +1,252 @@
+﻿@page "/supply-request"
+
+@using System.Globalization
+@inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
+    <AuthorizeView>
+        @{
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        }
+
+        <MudAutocomplete T="Teacher" Label="Select Teacher" @bind-Value="SelectedTeacher"
+                         SearchFunc="@SearchTeacher" ToStringFunc="x => x.Name" Class="mt-3" />
+
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-3">
+            <MudIcon Icon="@Icons.Material.Filled.AddBox" /> <MudText Typo="Typo.h6">Add Product</MudText>
+        </MudStack>
+
+        <MudFocusTrap>
+            <MudAutocomplete T="Product" Label="Cari Produk" @bind-Value="ProductSelected"
+                             SearchFunc="@Search" ToStringFunc="x => x.Name" Class="mt-3" />
+            @if (ProductSelected != null)
+            {
+                <MudCard Class="mt-1">
+                    <MudCardContent>
+                        <MudText>@ProductSelected.Name</MudText>
+                        <MudText Typo="Typo.body2">Quantity: @ProductSelected.Quantity</MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudStack Row>
+                            <MudNumericField Style="width:100px;" Variant="Variant.Outlined" @bind-Value="QuantityToOrder" Min="0" Max="@ProductSelected.Quantity"></MudNumericField>
+                            <MudButton Variant="Variant.Text" Disabled="@(QuantityToOrder == 0 || ProductSelected.Quantity == 0 || QuantityToOrder == null || QuantityToOrder > ProductSelected.Quantity)" OnClick="AddToCart" Color="Color.Primary" >Add to Cart</MudButton>
+                        </MudStack>
+                    </MudCardActions>
+                </MudCard>
+            }
+        </MudFocusTrap>
+
+        <MudDivider />
+
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-5">
+            <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" /> <MudText Typo="Typo.h6">Cart</MudText>
+        </MudStack>
+        <MudDataGrid Items="Cart" Class="mt-2" Dense="true">
+            <Columns>
+                <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
+                <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>
+                <TemplateColumn Title="Action">
+                    <CellTemplate Context="actionContext">
+                        <MudStack Row Spacing="0">
+                            <MudIconButton Size="Size.Small"
+                                           Icon="@Icons.Material.Filled.Edit"
+                                           OnClick="@(() => OpenEditDialog(actionContext.Item))" />
+                            <MudIconButton Size="Size.Small"
+                                           Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           OnClick="@(() => OpenDeleteDialog(actionContext.Item))" />
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+        <MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
+            <DialogContent>
+                <MudText Typo="Typo.h6">Edit Quantity for @CartItemToEdit?.Product.Name</MudText>
+                <MudNumericField @bind-Value="NewQuantity" Min="1" Max="@MaxEditableQuantity"
+                                 Label="New Quantity" Style="width:100%;" />
+            </DialogContent>
+            <DialogActions>
+                <MudButton Variant="Variant.Filled" OnClick="UpdateCartItem">Update</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="() => EditDialogVisible = false">Cancel</MudButton>
+            </DialogActions>
+        </MudDialog>
+
+        <MudDialog @bind-Visible="DeleteDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
+            <TitleContent>
+                <MudText Typo="Typo.h6">Delete Product?</MudText>
+            </TitleContent>
+            <DialogContent>
+                Are you sure you want to remove <b>@CartItemToDelete?.Product.Name</b> from the cart?
+            </DialogContent>
+            <DialogActions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Error"
+                           OnClick="DeleteCartItem">
+                    Delete
+                </MudButton>
+                <MudButton Variant="Variant.Text"
+                           OnClick="() => DeleteDialogVisible = false">
+                    Cancel
+                </MudButton>
+            </DialogActions>
+        </MudDialog>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ShoppingCartCheckout" Disabled="@(Cart.Count == 0 || SelectedTeacher == null)" OnClick="async x => await ProcessTransaction(userId)">Submit Supply Request</MudButton>
+    </AuthorizeView>
+</MudContainer>
+
+@code {
+    Teacher? SelectedTeacher { get; set; }
+    List<Teacher> Teachers { get; set; } = new();
+    List<Product> Products { get; set; } = new();
+    Product? ProductSelected { get; set; } = null;
+    int? QuantityToOrder = null;
+    List<CartItem> Cart { get; set; } = new();
+    bool EditDialogVisible { get; set; }
+    CartItem? CartItemToEdit { get; set; }
+    CartItem? CartItemToDelete { get; set; }
+    int NewQuantity { get; set; }
+    bool DeleteDialogVisible { get; set; } = false;
+    int MaxEditableQuantity => CartItemToEdit?.Product.Quantity ?? 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTeachers();
+        await LoadProducts();
+    }
+
+    async Task LoadTeachers()
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        Teachers = await db.Teachers.ToListAsync();
+    }
+
+    async Task<IEnumerable<Teacher>> SearchTeacher(string value, CancellationToken token)
+    {
+        await Task.CompletedTask;
+        if (string.IsNullOrWhiteSpace(value)) return Teachers;
+        return Teachers.Where(x => x.Name.Contains(value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    async Task LoadProducts()
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        Products = await db.Products.Where(x => x.CanBeBoughtByTeachers).ToListAsync();
+    }
+
+    async Task<IEnumerable<Product>> Search(string value, CancellationToken token)
+    {
+        await Task.CompletedTask;
+        QuantityToOrder = null;
+        return Products.Where(x => x.Name.ToUpper().StartsWith(value.ToUpper()));
+    }
+
+    void AddToCart()
+    {
+        if (ProductSelected != null && QuantityToOrder != null)
+        {
+            bool isFound = false;
+            for (int i = 0; i < Cart.Count; i++)
+            {
+                var cart = Cart[i];
+                if (cart.Product.Id == ProductSelected.Id)
+                {
+                    cart.Quantity += QuantityToOrder.Value;
+                    if (cart.Quantity > ProductSelected.Quantity)
+                    {
+                        cart.Quantity = ProductSelected.Quantity;
+                    }
+                    isFound = true;
+                    break;
+                }
+            }
+            if (!isFound)
+            {
+                Cart.Add(new CartItem { Product = ProductSelected, Quantity = QuantityToOrder.Value });
+            }
+            StateHasChanged();
+        }
+    }
+
+    async Task ProcessTransaction(string userId)
+    {
+        int userIdInt = -1;
+        try
+        {
+            userIdInt = Convert.ToInt32(userId);
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("User Id cannot be converted? Not logged in? Access Violation ..");
+        }
+        if (SelectedTeacher == null)
+        {
+            Snackbar.Add("Please select a teacher.", Severity.Error);
+            return;
+        }
+        await using var applicationDbContext = await ApplicationDbContextFactory.CreateDbContextAsync();
+        var transactionProducts = new List<TransactionProduct>();
+        foreach (var cart in Cart)
+        {
+            transactionProducts.Add(new TransactionProduct()
+            {
+                Name = cart.Product.Name,
+                Barcode = cart.Product.Barcode,
+                Price = 0, // Price is zero for teacher supply request
+                Quantity = cart.Quantity,
+                ProductId = cart.Product.Id
+            });
+            await applicationDbContext.Products.Where(x => x.Id == cart.Product.Id).ExecuteUpdateAsync(setter => setter.SetProperty(x => x.Quantity, x => x.Quantity - cart.Quantity));
+        }
+        await applicationDbContext.Transactions.AddAsync(new Transaction()
+        {
+            CustomerName = string.Empty, // Always empty for supply request
+            TeacherId = SelectedTeacher.Id,
+            TransactionProducts = transactionProducts,
+            ProcessedById = userIdInt
+        });
+        await applicationDbContext.SaveChangesAsync();
+        Snackbar.Add("Supply request has been successfully added", Severity.Success);
+        NavigationManager.NavigateTo("/transaction");
+    }
+
+    void OpenEditDialog(CartItem item)
+    {
+        CartItemToEdit = item;
+        NewQuantity = item.Quantity;
+        EditDialogVisible = true;
+    }
+
+    void OpenDeleteDialog(CartItem item)
+    {
+        CartItemToDelete = item;
+        DeleteDialogVisible = true;
+    }
+
+    void UpdateCartItem()
+    {
+        if (CartItemToEdit != null)
+        {
+            CartItemToEdit.Quantity = Math.Min(NewQuantity, CartItemToEdit.Product.Quantity);
+        }
+        EditDialogVisible = false;
+    }
+
+    void DeleteCartItem()
+    {
+        if (CartItemToDelete != null)
+        {
+            Cart.Remove(CartItemToDelete);
+        }
+        DeleteDialogVisible = false;
+    }
+
+    public class CartItem
+    {
+        public Product Product = new();
+        public int Quantity;
+    }
+}

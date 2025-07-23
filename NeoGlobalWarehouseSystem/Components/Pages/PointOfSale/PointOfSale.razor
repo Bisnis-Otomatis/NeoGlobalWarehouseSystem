@@ -222,7 +222,7 @@
     {
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
 
-        Products = await db.Products.ToListAsync();
+        Products = await db.Products.Where(x => x.CanBeBoughtByStudents).ToListAsync();
     }
 
     async Task<IEnumerable<Data.ApplicationDb.Product>> Search(string value, CancellationToken token)
