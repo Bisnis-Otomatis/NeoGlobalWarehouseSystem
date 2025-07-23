@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NeoGlobalWarehouseSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250717105841_InitialMigration")]
-    partial class InitialMigration
+    [Migration("20250723073420_AddNew")]
+    partial class AddNew
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -242,6 +242,10 @@ namespace NeoGlobalWarehouseSystem.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("ProcessedById")
                         .HasColumnType("integer");

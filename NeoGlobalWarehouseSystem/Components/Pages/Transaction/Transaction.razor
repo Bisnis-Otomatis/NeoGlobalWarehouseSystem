@@ -24,7 +24,13 @@
                     {
                         <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
                             <MudIcon Icon="@Icons.Material.Filled.People" />
-                            @("Buyer")
+                            @("Customer")
+                            @if (context.Item.TransactionCustomerName != "")
+                            {
+                                {
+                                    @(" (" + context.Item.TransactionCustomerName + ")")
+                                }
+                            }
                         </MudStack>
                     }
                 </CellTemplate>
@@ -32,15 +38,14 @@
             <PropertyColumn Property="x => x.TransactionProductCount" Title="Total Products" />
             <PropertyColumn Property="x => x.TransactionProductTotalPrice" Title="Total Price" >
                 <CellTemplate>
-                    <img src="https://live.staticflickr.com/2912/14631730560_72b3caff70_z.jpg" jsaction="" class="sFlh5c FyHeAf iPVvYb" style="max-width: 427px; height: 639px; margin: 0px; width: 427px;" alt="Cute young Chinese girl | adamba100 | Flickr" jsname="kn3ccd">
-@*                     @if (context.Item.IsTeacher == true)
+                    @if (context.Item.IsTeacher == true)
                     {
-                        
+                        @("-")
                     }
                     else
                     {
                         @("Rp. " + context.Item.TransactionProductTotalPrice.ToString("N0", CultureInfo.GetCultureInfo("id-ID")))
-                    } *@
+                    } 
                 </CellTemplate>
             </PropertyColumn>
             <PropertyColumn Property="x => x.ProcessedByName" Title="Processed by"/>
@@ -160,19 +165,23 @@
         Transactions = await db.Transactions.Select(x => new TransactionDTO
                 {
                     Id = x.Id,
+                    TransactionCustomerName = x.CustomerName,
                     IsTeacher = (x.TeacherId != null),
                     TeacherName = x.Teacher != null ? x.Teacher.Name : string.Empty,
                     TransactionProductCount = x.TransactionProducts.Count,
                     TransactionProductTotalPrice = x.TransactionProducts.Sum(x => x.Price * x.Quantity),
                     ProcessedByName = x.ProcessedBy.Name,
                     TimeStamp = x.TimeStamp
-                }).ToListAsync();
+                })
+                .OrderByDescending(x => x.TimeStamp)
+                .ToListAsync();
         StateHasChanged();
     }
 
     public class TransactionDTO
     {
         public int Id { get; set; }
+        public string TransactionCustomerName { get; set; } = "";
         public bool IsTeacher { get; set; }
         public string TeacherName { get; set; } = "";
         public int TransactionProductCount { get; set; }

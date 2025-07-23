@@ -240,6 +240,10 @@ namespace NeoGlobalWarehouseSystem.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("ProcessedById")
                         .HasColumnType("integer");
 

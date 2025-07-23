@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NeoGlobalWarehouseSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class AddNew : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -222,6 +222,7 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     ProcessedById = table.Column<int>(type: "integer", nullable: false),
+                    CustomerName = table.Column<string>(type: "text", nullable: false),
                     TeacherId = table.Column<int>(type: "integer", nullable: true),
                     TimeStamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },

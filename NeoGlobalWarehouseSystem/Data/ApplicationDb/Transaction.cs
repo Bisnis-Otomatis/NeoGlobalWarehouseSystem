@@ -10,6 +10,8 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
         public User ProcessedBy { get; set; } = null!;
         public int ProcessedById { get; set; }
 
+        public string CustomerName { get; set; } = "";
+
         public Teacher? Teacher { get; set; }
         public int? TeacherId { get; set; }
 

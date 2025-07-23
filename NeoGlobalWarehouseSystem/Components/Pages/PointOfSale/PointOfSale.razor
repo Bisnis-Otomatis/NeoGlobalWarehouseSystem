@@ -1,5 +1,7 @@
 ﻿@using System.Globalization
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
 @page "/point-of-sales"
 
 <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
@@ -17,37 +19,41 @@
             </MudRadioGroup>
         </MudStack> *@
 
-        <MudTextField @bind-Value="CustomerName" T="string" Variant="Variant.Text" Label="Customer Name"/>
+        <MudTextField @bind-Value="CustomerName" T="string" Variant="Variant.Text" MaxLength="50" Label="Customer Name"/>
 
         <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-3">
             <MudIcon Icon="@Icons.Material.Filled.AddBox" /> <MudText Typo="Typo.h6">Add Product</MudText>
         </MudStack>
 
-        <MudAutocomplete T="Data.ApplicationDb.Product" Label="Cari Produk" @bind-Value="ProductSelected" 
-                             SearchFunc="@Search" ToStringFunc="x => x.Name" />
+        <MudFocusTrap>
+
+            <MudAutocomplete T="Data.ApplicationDb.Product" Label="Cari Produk" @bind-Value="ProductSelected" 
+                                 SearchFunc="@Search" ToStringFunc="x => x.Name" Class="mt-3" />
         
-        @if (ProductSelected != null)
-        {
-            <MudCard>
-                <MudCardContent>
-                    <MudText>@ProductSelected.Name</MudText>
-                    <MudText Typo="Typo.body2">Quantity: @ProductSelected.Quantity</MudText>
-                    <MudText Typo="Typo.body2">Price: Rp. @ProductSelected.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))</MudText>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudStack Row>
-                        <MudNumericField Style="width:100px;" Variant="Variant.Outlined" @bind-Value="QuantityToOrder" Min="0" Max="@ProductSelected.Quantity"></MudNumericField>
-                        <MudButton Variant="Variant.Text" Disabled="@(QuantityToOrder == 0 || ProductSelected.Quantity == 0 || QuantityToOrder == null || QuantityToOrder > ProductSelected.Quantity)" OnClick="AddToCart" Color="Color.Primary" >Add to Cart</MudButton>
-                    </MudStack>
-                </MudCardActions>
-            </MudCard>
-        }   
+            @if (ProductSelected != null)
+            {
+                <MudCard Class="mt-1">
+                    <MudCardContent>
+                        <MudText>@ProductSelected.Name</MudText>
+                        <MudText Typo="Typo.body2">Quantity: @ProductSelected.Quantity</MudText>
+                        <MudText Typo="Typo.body2">Price: Rp. @ProductSelected.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))</MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudStack Row>
+                            <MudNumericField Style="width:100px;" Variant="Variant.Outlined" @bind-Value="QuantityToOrder" Min="0" Max="@ProductSelected.Quantity"></MudNumericField>
+                            <MudButton Variant="Variant.Text" Disabled="@(QuantityToOrder == 0 || ProductSelected.Quantity == 0 || QuantityToOrder == null || QuantityToOrder > ProductSelected.Quantity)" OnClick="AddToCart" Color="Color.Primary" >Add to Cart</MudButton>
+                        </MudStack>
+                    </MudCardActions>
+                </MudCard>
+            }
+        </MudFocusTrap>
+
         <MudDivider />
 
-        <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-3">
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-5">
             <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" /> <MudText Typo="Typo.h6">Cart</MudText>
         </MudStack>
-        <MudDataGrid Items="Cart">
+        <MudDataGrid Items="Cart" Class="mt-2" Dense="true">
             <Columns>
                 <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
                 <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>
@@ -78,11 +84,15 @@
             </Columns>
             <PagerContent>
                 <MudTr>
-                    <MudTd ColSpan="3" Align="Align.Right">
-                        <b>Grand Total:</b>
-                    </MudTd>
-                    <MudTd>
-                        <b>Rp. @Cart.Sum(x => x.Product.Price * x.Quantity).ToString("N0", CultureInfo.GetCultureInfo("id-ID"))</b>
+                    <MudTd ColSpan="5" Align="Align.Right">
+                        <MudStack Row>
+                            <MudText Typo="Typo.h6">Total:</MudText>
+                            <MudText Typo="Typo.h6">Rp. @Cart.Sum(x => x.Product.Price * x.Quantity).ToString("N0", CultureInfo.GetCultureInfo("id-ID"))</MudText>
+                            @if (Cart.Count > 0)
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ShoppingCartCheckout" OnClick="async x => await ProcessTransaction(userId)">Checkout</MudButton>
+                            }
+                        </MudStack>
                     </MudTd>
                 </MudTr>
             </PagerContent>
@@ -136,7 +146,47 @@
     {
         await LoadProducts();
     }
+    async Task ProcessTransaction(string userId)
+    {
+        int userIdInt = -1;
+        try
+        {
+            userIdInt = Convert.ToInt32(userId);
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("User Id cannot be converted? Not logged in? Access Violation ..");
+        }
 
+        await using var applicationDbContext = await ApplicationDbContextFactory.CreateDbContextAsync();
+
+        var transactionProducts = new List<TransactionProduct>();
+        foreach (var cart in Cart)
+        {
+            transactionProducts.Add(new TransactionProduct()
+            {
+                Name = cart.Product.Name,
+                Barcode = cart.Product.Barcode,
+                Price = cart.Product.Price,
+                Quantity = cart.Product.Quantity,
+                ProductId = cart.Product.Id
+            });
+
+            await applicationDbContext.Products.Where(x => x.Id == cart.Product.Id).ExecuteUpdateAsync(setter => setter.SetProperty(x => x.Quantity, x => x.Quantity - 3));
+        }
+
+        await applicationDbContext.Transactions.AddAsync(new Transaction()
+        {
+            CustomerName = CustomerName,
+            TransactionProducts = transactionProducts,
+            ProcessedById = userIdInt
+        });
+
+        await applicationDbContext.SaveChangesAsync();
+
+        Snackbar.Add("Transaction has been successfully added", Severity.Success);
+        NavigationManager.NavigateTo("/transaction");
+    }
     void AddToCart()
     {
         if (ProductSelected != null && QuantityToOrder != null)
