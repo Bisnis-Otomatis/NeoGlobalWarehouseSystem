@@ -74,13 +74,24 @@ namespace NeoGlobalWarehouseSystem.Controllers
                 container.Page(page =>
                 {
                     page.Margin(30);
-                    page.Header().Text($"{reportTitle} - {monthName} {year}").FontSize(18).Bold();
+                    page.Header().Column(headerCol =>
+                    {
+                        headerCol.Item().AlignCenter().Text($"{reportTitle} - {monthName} {year}").FontSize(18).Bold();
+                        headerCol.Item().AlignCenter().Text($"Date: {DateTime.Now:dd/MM/yyyy HH:mm}").FontSize(12);
+                    });
                     page.Content().Element(c =>
                     {
                         c.Column(col =>
                         {
+                            bool first = true;
                             foreach (var tx in transactions.OrderBy(x => x.TimeStamp))
                             {
+                                if (!first)
+                                {
+                                    // Add a thick horizontal line to separate transactions
+                                    col.Item().PaddingVertical(10).BorderBottom(2).BorderColor(Colors.Grey.Darken2);
+                                }
+                                first = false;
                                 col.Item().Text($"Date: {tx.TimeStamp:dd/MM/yyyy HH:mm}").Bold();
                                 if (type.ToLower() == "customer")
                                 {
@@ -103,19 +114,19 @@ namespace NeoGlobalWarehouseSystem.Controllers
                                     });
                                     table.Header(header =>
                                     {
-                                        header.Cell().Text("Product").Bold();
-                                        header.Cell().Text("Qty").Bold();
+                                        header.Cell().Element(CellStyle).Text("Product").Bold();
+                                        header.Cell().Element(CellStyle).Text("Qty").Bold();
                                         if (type.ToLower() == "customer")
-                                            header.Cell().Text("Price").Bold();
-                                        header.Cell().Text(type.ToLower() == "customer" ? "Total" : "");
+                                            header.Cell().Element(CellStyle).Text("Price").Bold();
+                                        header.Cell().Element(CellStyle).Text(type.ToLower() == "customer" ? "Total" : "");
                                     });
                                     foreach (var p in tx.TransactionProducts)
                                     {
-                                        table.Cell().Text(p.Name);
-                                        table.Cell().Text(p.Quantity.ToString());
+                                        table.Cell().Element(CellStyle).Text(p.Name);
+                                        table.Cell().Element(CellStyle).Text(p.Quantity.ToString());
                                         if (type.ToLower() == "customer")
-                                            table.Cell().Text($"Rp. {p.Price:N0}");
-                                        table.Cell().Text(type.ToLower() == "customer" ? $"Rp. {(p.Price * p.Quantity):N0}" : "");
+                                            table.Cell().Element(CellStyle).Text($"Rp. {p.Price:N0}");
+                                        table.Cell().Element(CellStyle).Text(type.ToLower() == "customer" ? $"Rp. {(p.Price * p.Quantity):N0}" : "");
                                     }
                                 });
                                 if (type.ToLower() == "customer")
@@ -129,6 +140,10 @@ namespace NeoGlobalWarehouseSystem.Controllers
                     });
                 });
             });
+
+            static IContainer CellStyle(IContainer container) =>
+                container.Border(1).BorderColor(Colors.Grey.Darken2).PaddingVertical(2).PaddingHorizontal(4);
+
             return document.GeneratePdf();
         }
     }

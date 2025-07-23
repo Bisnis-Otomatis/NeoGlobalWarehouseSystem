@@ -6,28 +6,30 @@
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
 
-<MudPaper Class="pa-4 mt-4">
-    <MudStack Spacing="2">
-        <MudAutocomplete T="string" Label="Report For" @bind-Value="SelectedReportType" 
-                         SearchFunc="SearchReportType" ToStringFunc="x => x" 
-                         ResetValueOnEmptyText="true" Dense="true" />
-        <MudSelect T="int" Label="Month" @bind-Value="SelectedMonth">
-            @foreach (var month in AvailableMonths)
-            {
-                <MudSelectItem Value="@month.Value">@month.Key</MudSelectItem>
-            }
-        </MudSelect>
-        <MudSelect T="int" Label="Year" @bind-Value="SelectedYear">
-            @foreach (var year in AvailableYears)
-            {
-                <MudSelectItem Value="@year">@year</MudSelectItem>
-            }
-        </MudSelect>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="DownloadReport" Disabled="@(string.IsNullOrEmpty(SelectedReportType) || SelectedMonth == 0 || SelectedYear == 0)">
-            Download PDF
-        </MudButton>
-    </MudStack>
-</MudPaper>
+<MudContainer>
+    <MudPaper Class="pa-4 mt-4">
+        <MudStack Spacing="2">
+            <MudAutocomplete T="string" Label="Report For" @bind-Value="SelectedReportType"
+                             SearchFunc="SearchReportType" ToStringFunc="x => x"
+                             ResetValueOnEmptyText="true" Dense="true" />
+            <MudSelect T="int" Label="Month" @bind-Value="SelectedMonth">
+                @foreach (var month in AvailableMonths)
+                {
+                    <MudSelectItem Value="@month.Value">@month.Key</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="int" Label="Year" @bind-Value="SelectedYear">
+                @foreach (var year in AvailableYears)
+                {
+                    <MudSelectItem Value="@year">@year</MudSelectItem>
+                }
+            </MudSelect>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="DownloadReport" Disabled="@(string.IsNullOrEmpty(SelectedReportType) || SelectedMonth == 0 || SelectedYear == 0)">
+                Download PDF
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
 
 @code {
     private string? SelectedReportType;
