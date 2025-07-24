@@ -30,17 +30,17 @@ namespace NeoGlobalWarehouseSystem.Controllers
                 var transactions = await db.Transactions
                     .Include(x => x.TransactionProducts)
                     .Include(x => x.ProcessedBy)
-                    .Include(x => x.Teacher)
+                    .Include(x => x.Employee)
                     .Where(x => x.TimeStamp.Month == month && x.TimeStamp.Year == year)
                     .ToListAsync();
 
                 if (type.ToLower() == "customer")
                 {
-                    transactions = transactions.Where(x => x.TeacherId == null).ToList();
+                    transactions = transactions.Where(x => x.EmployeeId == null).ToList();
                 }
-                else if (type.ToLower() == "teacher")
+                else if (type.ToLower() == "employee")
                 {
-                    transactions = transactions.Where(x => x.TeacherId != null).ToList();
+                    transactions = transactions.Where(x => x.EmployeeId != null).ToList();
                 }
                 else
                 {
@@ -68,7 +68,7 @@ namespace NeoGlobalWarehouseSystem.Controllers
         private byte[] GenerateReportPdf(string type, List<Data.ApplicationDb.Transaction> transactions, int month, int year)
         {
             var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
-            var reportTitle = type.ToLower() == "customer" ? "Customer Sales Report" : "Teacher Product Take Report";
+            var reportTitle = type.ToLower() == "customer" ? "Customer Sales Report" : "Employee Product Take Report";
             var document = Document.Create(container =>
             {
                 container.Page(page =>
@@ -99,7 +99,7 @@ namespace NeoGlobalWarehouseSystem.Controllers
                                 }
                                 else
                                 {
-                                    col.Item().Text($"Teacher: {tx.Teacher?.Name}");
+                                    col.Item().Text($"Employee: {tx.Employee?.Name}");
                                 }
                                 col.Item().Text($"Processed By: {tx.ProcessedBy.Name}");
                                 col.Item().Table(table =>

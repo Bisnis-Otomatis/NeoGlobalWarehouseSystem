@@ -12,8 +12,8 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
 
         public string CustomerName { get; set; } = "";
 
-        public Employee? Teacher { get; set; }
-        public int? TeacherId { get; set; }
+        public Employee? Employee { get; set; }
+        public int? EmployeeId { get; set; }
 
         public DateTime TimeStamp { get; set; } = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
         public List<TransactionProduct> TransactionProducts { get; set; } = new();

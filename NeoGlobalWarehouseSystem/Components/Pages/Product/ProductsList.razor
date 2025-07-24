@@ -1,6 +1,7 @@
 ﻿@using System.Globalization
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @inject ISnackbar Snackbar
+@using NeoGlobalWarehouseSystem.Data.ApplicationDb
 
 <MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product" Immediate="true"></MudTextField>
 
@@ -17,20 +18,19 @@
                 Rp. @context.Item.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))
             </CellTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.Product.CanBeBoughtByStudents"
-            Title="Student">
+        <PropertyColumn Property="x => x.Product.CanBeBoughtByStudents" Title="Students">
             <CellTemplate>
-                @if (context.Item.Product.CanBeBoughtByStudents == true)
+                @if (context.Item.Product.CanBeBoughtByStudents)
                 {
                     <MudIcon Icon="@Icons.Material.Filled.Check"></MudIcon>
                 }
             </CellTemplate>
-            </PropertyColumn>
-        <PropertyColumn Property="x => x.Product.CanBeBoughtByTeachers" Title="Teachers">
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Product.CanBeBoughtByEmployeeTypes" Title="Employee Types">
             <CellTemplate>
-                @if (context.Item.Product.CanBeBoughtByTeachers == true)
+                @if (context.Item.Product.CanBeBoughtByEmployeeTypes != null && context.Item.Product.CanBeBoughtByEmployeeTypes.Count > 0)
                 {
-                    <MudIcon Icon="@Icons.Material.Filled.Check"></MudIcon>
+                    @string.Join(", ", context.Item.Product.CanBeBoughtByEmployeeTypes)
                 }
             </CellTemplate>
         </PropertyColumn>
@@ -75,7 +75,7 @@
 
 <MudDialog @bind-Visible="EditDialogIsVisible" Options="_dialogOptions">
     <DialogContent>
-        <ProductEditor Product="ProductSentToEditDialog" ButtonName="Edit Product" ProcessedProduct="UpdateProduct" />
+        <ProductEditor Product="ProductSentToEditDialog" ButtonName="Edit Product" ProcessedProduct="UpdateProductCallback" />
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Filled" Color="Color.Dark" OnClick="() => EditDialogIsVisible = false" Class="px-10">Cancel</MudButton>
@@ -102,10 +102,10 @@
     List<ProductDTO> Products { get; set; } = new();
 
     bool EditDialogIsVisible { get; set; } = false;
-    Data.ApplicationDb.Product ProductSentToEditDialog { get; set; } = new();
+    NeoGlobalWarehouseSystem.Data.ApplicationDb.Product ProductSentToEditDialog { get; set; } = new();
 
     bool DeleteDialogIsVisible { get; set; } = false;
-    Data.ApplicationDb.Product ProductSentToDeleteDialog { get; set; } = new();
+    NeoGlobalWarehouseSystem.Data.ApplicationDb.Product ProductSentToDeleteDialog { get; set; } = new();
 
     DialogOptions _dialogOptions = new() { FullWidth = true };
 
@@ -115,7 +115,7 @@
         {
             return true;
         }
-        var searchString = $"{productDTO.Product.Id}{productDTO.Product.Name} {productDTO.Product.Barcode} {productDTO.Product.Quantity} {"Rp. " + productDTO.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))} {(productDTO.Product.CanBeBoughtByStudents ? "student" : "")} {(productDTO.Product.CanBeBoughtByTeachers ? "teacher" : "")} {productDTO.LastProductInputDateTime} {productDTO.LastTransactionDateTime}".ToLowerInvariant();
+        var searchString = $"{productDTO.Product.Id}{productDTO.Product.Name} {productDTO.Product.Barcode} {productDTO.Product.Quantity} \"Rp. \" + {productDTO.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))} {(productDTO.Product.CanBeBoughtByStudents ? "student" : "")} {string.Join(",", productDTO.Product.CanBeBoughtByEmployeeTypes)} {productDTO.LastProductInputDateTime} {productDTO.LastTransactionDateTime}".ToLowerInvariant();
 
         var searchKeywords = SearchKeyword.ToLowerInvariant().Split(" ");
         int countMatch = 0;
@@ -129,13 +129,15 @@
         return countMatch == searchKeywords.Length; //if all match, return product
     }
 
-    public void OpenUpdateDialog(Data.ApplicationDb.Product product)
+    public void OpenUpdateDialog(NeoGlobalWarehouseSystem.Data.ApplicationDb.Product product)
     {
         EditDialogIsVisible = true;
         ProductSentToEditDialog = product;
     }
 
-    public async Task UpdateProduct(Data.ApplicationDb.Product product)
+    public EventCallback<NeoGlobalWarehouseSystem.Data.ApplicationDb.Product> UpdateProductCallback => EventCallback.Factory.Create<NeoGlobalWarehouseSystem.Data.ApplicationDb.Product>(this, UpdateProduct);
+
+    public async Task UpdateProduct(NeoGlobalWarehouseSystem.Data.ApplicationDb.Product product)
     {
         await using var applicationDbContext = await ApplicationDbContextFactory.CreateDbContextAsync();
 
@@ -144,15 +146,15 @@
                 .SetProperty(x => x.Quantity, product.Quantity)
                 .SetProperty(x => x.Barcode, product.Barcode)
                 .SetProperty(x => x.Price, product.Price)
-                .SetProperty(x => x.CanBeBoughtByTeachers, product.CanBeBoughtByTeachers)
                 .SetProperty(x => x.CanBeBoughtByStudents, product.CanBeBoughtByStudents)
+                .SetProperty(x => x.CanBeBoughtByEmployeeTypes, product.CanBeBoughtByEmployeeTypes)
             );
 
         EditDialogIsVisible = false;
         Snackbar.Add("Product has been succesfully updated", Severity.Success);
     }
 
-    public void OpenDeleteDialog(Data.ApplicationDb.Product product)
+    public void OpenDeleteDialog(NeoGlobalWarehouseSystem.Data.ApplicationDb.Product product)
     {
         DeleteDialogIsVisible = true;
         ProductSentToDeleteDialog = product;
@@ -189,7 +191,7 @@
 
     public class ProductDTO
     {
-        public required Data.ApplicationDb.Product Product { get; set; }
+        public required NeoGlobalWarehouseSystem.Data.ApplicationDb.Product Product { get; set; }
         public required DateTime LastProductInputDateTime { get; set; }
         public required DateTime LastTransactionDateTime { get; set; }
     }

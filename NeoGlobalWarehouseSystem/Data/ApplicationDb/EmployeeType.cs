@@ -2,6 +2,9 @@
 {
     public enum EmployeeType
     {
-        Admin, Storeman, Cashier
+        None, // Default value for unselected
+        Teacher,
+        CleaningService,
+        Others
     }
 }

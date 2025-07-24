@@ -10,26 +10,32 @@
             var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         }
 
-
-@*         <MudStack Row AlignItems="AlignItems.Center">
-            <MudText>For </MudText>
-            <MudRadioGroup T="bool" @bind-Value="IsForTeacher">
-                <MudRadio Value="true" Color="Color.Primary">Teacher</MudRadio>
-                <MudRadio Value="false" Color="Color.Secondary">Students, Parents, etc.</MudRadio>
-            </MudRadioGroup>
-        </MudStack> *@
-
         <MudTextField @bind-Value="CustomerName" T="string" Variant="Variant.Text" MaxLength="50" Label="Customer Name"/>
 
         <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-3">
             <MudIcon Icon="@Icons.Material.Filled.AddBox" /> <MudText Typo="Typo.h6">Add Product</MudText>
         </MudStack>
 
-        <MudFocusTrap>
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mt-3">
+            <MudCheckBox @bind-Value="IsForStudent" Label="For Students" />
+            <MudCheckBox @bind-Value="IsForEmployee" Label="For Employees" />
+            @if (IsForEmployee)
+            {
+                <MudSelect T="EmployeeType" @bind-Value="SelectedEmployeeType" Label="Employee Type">
+                    @foreach (var type in Enum.GetValues<EmployeeType>())
+                    {
+                        if (type != EmployeeType.None)
+                        {
+                            <MudSelectItem Value="@type">@type.ToString()</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            }
+        </MudStack>
 
+        <MudFocusTrap>
             <MudAutocomplete T="Data.ApplicationDb.Product" Label="Cari Produk" @bind-Value="ProductSelected" 
                                  SearchFunc="@Search" ToStringFunc="x => x.Name" Class="mt-3" />
-        
             @if (ProductSelected != null)
             {
                 <MudCard Class="mt-1">
@@ -69,15 +75,14 @@
                 </PropertyColumn>
                 <TemplateColumn Title="Action">
                     <CellTemplate Context="actionContext">
-                        @* <--- THIS IS THE KEY CHANGE *@
                         <MudStack Row Spacing="0">
                             <MudIconButton Size="Size.Small"
                                            Icon="@Icons.Material.Filled.Edit"
-                                           OnClick="@(() => OpenEditDialog(actionContext.Item))" /> @* <--- USE actionContext.Item *@
+                                           OnClick="@(() => OpenEditDialog(actionContext.Item))" />
                             <MudIconButton Size="Size.Small"
                                            Icon="@Icons.Material.Filled.Delete"
                                            Color="Color.Error"
-                                           OnClick="@(() => OpenDeleteDialog(actionContext.Item))" /> @* <--- USE actionContext.Item *@
+                                           OnClick="@(() => OpenDeleteDialog(actionContext.Item))" />
                         </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
@@ -100,8 +105,8 @@
         <MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
     <DialogContent>
         <MudText Typo="Typo.h6">Edit Quantity for @CartItemToEdit?.Product.Name</MudText>
-                <MudNumericField @bind-Value="NewQuantity" Min="1" Max="@MaxEditableQuantity"
-                                 Label="New Quantity" Style="width:100%;" />
+        <MudNumericField @bind-Value="NewQuantity" Min="1" Max="@MaxEditableQuantity"
+                         Label="New Quantity" Style="width:100%;" />
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Filled" OnClick="UpdateCartItem">Update</MudButton>
@@ -132,15 +137,16 @@
     </AuthorizeView>
 </MudContainer>
 
-
 @code {
-    // bool IsForTeacher { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     bool EditDialogVisible { get; set; }
     List<Data.ApplicationDb.Product> Products { get; set; } = new();
     Data.ApplicationDb.Product? ProductSelected { get; set; } = null;
     int? QuantityToOrder = null;
     List<CartItem> Cart { get; set; } = new();
+    bool IsForStudent { get; set; } = true;
+    bool IsForEmployee { get; set; } = false;
+    EmployeeType SelectedEmployeeType { get; set; } = EmployeeType.None;
 
     protected async override Task OnInitializedAsync()
     {
@@ -222,12 +228,15 @@
     async Task LoadProducts()
     {
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
-
-        Products = await db.Products.Where(x => x.CanBeBoughtByStudents).ToListAsync();
+        Products = await db.Products.Where(x =>
+            (IsForStudent && x.CanBeBoughtByStudents) ||
+            (IsForEmployee && SelectedEmployeeType != EmployeeType.None && x.CanBeBoughtByEmployeeTypes.Contains(SelectedEmployeeType))
+        ).ToListAsync();
     }
 
     async Task<IEnumerable<Data.ApplicationDb.Product>> Search(string value, CancellationToken token)
     {
+        await LoadProducts();
         await Task.CompletedTask;
         QuantityToOrder = null;
         return Products.Where(x => x.Name.ToUpper().StartsWith(value.ToUpper()));

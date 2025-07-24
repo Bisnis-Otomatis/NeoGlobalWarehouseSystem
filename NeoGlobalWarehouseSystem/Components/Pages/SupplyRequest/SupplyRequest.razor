@@ -4,6 +4,7 @@
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
+@using NeoGlobalWarehouseSystem.Data.ApplicationDb
 
 <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
     <AuthorizeView>
@@ -11,8 +12,14 @@
             var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         }
 
-        <MudAutocomplete T="Teacher" Label="Select Teacher" @bind-Value="SelectedTeacher"
-                         SearchFunc="@SearchTeacher" ToStringFunc="x => x.Name" Class="mt-3" />
+        <MudAutocomplete T="NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee" Label="Select Employee" @bind-Value="SelectedEmployee"
+                         SearchFunc="@SearchEmployee" ToStringFunc="x => x.Name" Class="mt-3" />
+        <MudSelect T="EmployeeType" @bind-Value="SelectedEmployeeType" Label="Employee Type" Class="mt-3">
+            @foreach (var type in Enum.GetValues<EmployeeType>())
+            {
+                <MudSelectItem Value="@type">@type.ToString()</MudSelectItem>
+            }
+        </MudSelect>
 
         <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-3">
             <MudIcon Icon="@Icons.Material.Filled.AddBox" /> <MudText Typo="Typo.h6">Add Product</MudText>
@@ -94,13 +101,14 @@
             </DialogActions>
         </MudDialog>
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ShoppingCartCheckout" Disabled="@(Cart.Count == 0 || SelectedTeacher == null)" OnClick="async x => await ProcessTransaction(userId)">Submit Supply Request</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ShoppingCartCheckout" Disabled="@(Cart.Count == 0 || SelectedEmployee == null)" OnClick="async x => await ProcessTransaction(userId)">Submit Supply Request</MudButton>
     </AuthorizeView>
 </MudContainer>
 
 @code {
-    Teacher? SelectedTeacher { get; set; }
-    List<Teacher> Teachers { get; set; } = new();
+    NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee? SelectedEmployee { get; set; }
+    EmployeeType SelectedEmployeeType { get; set; } = EmployeeType.None;
+    List<NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee> Employees { get; set; } = new();
     List<Product> Products { get; set; } = new();
     Product? ProductSelected { get; set; } = null;
     int? QuantityToOrder = null;
@@ -111,30 +119,35 @@
     int NewQuantity { get; set; }
     bool DeleteDialogVisible { get; set; } = false;
     int MaxEditableQuantity => CartItemToEdit?.Product.Quantity ?? 1;
+    bool IsForStudent { get; set; } = false;
+    bool IsForEmployee { get; set; } = true;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadTeachers();
+        await LoadEmployees();
         await LoadProducts();
     }
 
-    async Task LoadTeachers()
+    async Task LoadEmployees()
     {
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
-        Teachers = await db.Teachers.ToListAsync();
+        Employees = await db.Employees.ToListAsync();
     }
 
-    async Task<IEnumerable<Teacher>> SearchTeacher(string value, CancellationToken token)
+    async Task<IEnumerable<NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee>> SearchEmployee(string value, CancellationToken token)
     {
         await Task.CompletedTask;
-        if (string.IsNullOrWhiteSpace(value)) return Teachers;
-        return Teachers.Where(x => x.Name.Contains(value, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(value)) return Employees;
+        return Employees.Where(x => x.Name.Contains(value, StringComparison.OrdinalIgnoreCase));
     }
 
     async Task LoadProducts()
     {
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
-        Products = await db.Products.Where(x => x.CanBeBoughtByTeachers).ToListAsync();
+        Products = await db.Products.Where(x =>
+            (IsForStudent && x.CanBeBoughtByStudents) ||
+            (IsForEmployee && SelectedEmployeeType != EmployeeType.None && x.CanBeBoughtByEmployeeTypes.Contains(SelectedEmployeeType))
+        ).ToListAsync();
     }
 
     async Task<IEnumerable<Product>> Search(string value, CancellationToken token)
@@ -182,9 +195,9 @@
         {
             Console.WriteLine("User Id cannot be converted? Not logged in? Access Violation ..");
         }
-        if (SelectedTeacher == null)
+        if (SelectedEmployee == null)
         {
-            Snackbar.Add("Please select a teacher.", Severity.Error);
+            Snackbar.Add("Please select an employee.", Severity.Error);
             return;
         }
         await using var applicationDbContext = await ApplicationDbContextFactory.CreateDbContextAsync();
@@ -195,7 +208,7 @@
             {
                 Name = cart.Product.Name,
                 Barcode = cart.Product.Barcode,
-                Price = 0, // Price is zero for teacher supply request
+                Price = 0, // Price is zero for employee supply request
                 Quantity = cart.Quantity,
                 ProductId = cart.Product.Id
             });
@@ -204,7 +217,7 @@
         await applicationDbContext.Transactions.AddAsync(new Transaction()
         {
             CustomerName = string.Empty, // Always empty for supply request
-            TeacherId = SelectedTeacher.Id,
+            EmployeeId = SelectedEmployee.Id,
             TransactionProducts = transactionProducts,
             ProcessedById = userIdInt
         });

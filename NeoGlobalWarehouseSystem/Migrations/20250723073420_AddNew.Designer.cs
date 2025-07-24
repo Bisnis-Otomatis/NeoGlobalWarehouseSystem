@@ -172,7 +172,7 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     b.Property<bool>("CanBeBoughtByStudents")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("CanBeBoughtByTeachers")
+                    b.Property<bool>("CanBeBoughtByEmployees")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
@@ -232,7 +232,7 @@ namespace NeoGlobalWarehouseSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Teachers");
+                    b.ToTable("Employees");
                 });
 
             modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Transaction", b =>

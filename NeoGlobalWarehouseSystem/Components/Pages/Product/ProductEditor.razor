@@ -1,4 +1,6 @@
 ﻿@using System.Globalization
+@using NeoGlobalWarehouseSystem.Data.ApplicationDb
+@using System.Collections.Generic
 
 <MudPaper Class="pa-5 ma-1" Elevation="3">
     <MudStack Spacing="3">
@@ -9,8 +11,17 @@
 
         <MudStack Row AlignItems="AlignItems.Center">
             <MudText>For: </MudText>
-            <MudCheckBox @bind-Value="CanBeBoughtByTeachers" Label="Teachers"></MudCheckBox>
             <MudCheckBox @bind-Value="CanBeBoughtByStudents" Label="Students"></MudCheckBox>
+            <MudCheckBox @bind-Value="CanBeBoughtByEmployees" Label="Employees"></MudCheckBox>
+            @if (CanBeBoughtByEmployees)
+            {
+                <MudSelect T="EmployeeType" @bind-SelectedValues="SelectedEmployeeTypes" MultiSelection="true" Label="Employee Types">
+                    @foreach (var type in Enum.GetValues<EmployeeType>())
+                    {
+                        <MudSelectItem Value="@type">@type.ToString()</MudSelectItem>
+                    }
+                </MudSelect>
+            }
         </MudStack>
         
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ReturnProduct">@ButtonName</MudButton>
@@ -23,22 +34,24 @@
     public int? Quantity;
     public string Barcode = string.Empty;
     public long? Price;
-    public bool CanBeBoughtByTeachers, CanBeBoughtByStudents;
+    public bool CanBeBoughtByStudents;
+    public bool CanBeBoughtByEmployees;
+    public List<EmployeeType> SelectedEmployeeTypes = new();
 
     [Parameter]
-    public Data.ApplicationDb.Product? Product { get; set; }
+    public NeoGlobalWarehouseSystem.Data.ApplicationDb.Product? Product { get; set; }
 
     [Parameter]
     public string ButtonName { get; set; } = string.Empty;
 
     [Parameter]
-    public EventCallback<Data.ApplicationDb.Product> ProcessedProduct { get; set; }
+    public EventCallback<NeoGlobalWarehouseSystem.Data.ApplicationDb.Product> ProcessedProduct { get; set; }
 
     protected override void OnInitialized()
     {
         if (Product == null)
         {
-            Product = new();
+            Product = new NeoGlobalWarehouseSystem.Data.ApplicationDb.Product();
         }
         else
         {
@@ -46,8 +59,9 @@
             Quantity = Product.Quantity == 0 ? null : Product.Quantity;
             Barcode = Product.Barcode;
             Price = Product.Price == 0 ? null : Product.Price;
-            CanBeBoughtByTeachers = Product.CanBeBoughtByTeachers;
             CanBeBoughtByStudents = Product.CanBeBoughtByStudents;
+            CanBeBoughtByEmployees = Product.CanBeBoughtByEmployeeTypes != null && Product.CanBeBoughtByEmployeeTypes.Count > 0;
+            SelectedEmployeeTypes = Product.CanBeBoughtByEmployeeTypes != null ? new List<EmployeeType>(Product.CanBeBoughtByEmployeeTypes) : new();
         }
     }
 
@@ -59,8 +73,8 @@
             Product.Quantity = (Quantity == null) ? 0 : Quantity.Value;
             Product.Price = (Price == null) ? 0 : Price.Value;
             Product.Barcode = Barcode;
-            Product.CanBeBoughtByTeachers = CanBeBoughtByTeachers;
             Product.CanBeBoughtByStudents = CanBeBoughtByStudents;
+            Product.CanBeBoughtByEmployeeTypes = CanBeBoughtByEmployees ? SelectedEmployeeTypes : new List<EmployeeType>();
 
             await ProcessedProduct.InvokeAsync(Product);
         }
@@ -69,11 +83,13 @@
 
     public void ResetFields()
     {
-        Product = new();
+        Product = new NeoGlobalWarehouseSystem.Data.ApplicationDb.Product();
         Name = string.Empty;
         Quantity = null;
         Barcode = string.Empty;
         Price = null;
-        CanBeBoughtByTeachers = CanBeBoughtByStudents = false;
+        CanBeBoughtByStudents = false;
+        CanBeBoughtByEmployees = false;
+        SelectedEmployeeTypes.Clear();
     }
 }

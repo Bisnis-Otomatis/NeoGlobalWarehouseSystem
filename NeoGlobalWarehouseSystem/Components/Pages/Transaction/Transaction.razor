@@ -11,13 +11,13 @@
     <MudDataGrid Items="@Transactions" class="mt-5" Dense="true" Hover="true" QuickFilter="PerformSearch">
         <Columns>
             <PropertyColumn Property="x => x.Id" Title="ID" />
-            <PropertyColumn Property="x => x.IsTeacher" Title="Customer Types">
+            <PropertyColumn Property="x => x.IsEmployee" Title="Customer Types">
                 <CellTemplate>
-                    @if (context.Item.IsTeacher)
+                    @if (context.Item.IsEmployee)
                     {
                         <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
                             <MudIcon Icon="@Icons.Material.Filled.Person" />
-                            @("Teacher") (@context.Item.TeacherName)
+                            @("Employee") (@context.Item.EmployeeName)
                         </MudStack>
                     }
                     else
@@ -38,7 +38,7 @@
             <PropertyColumn Property="x => x.TransactionProductCount" Title="Total Products" />
             <PropertyColumn Property="x => x.TransactionProductTotalPrice" Title="Total Price" >
                 <CellTemplate>
-                    @if (context.Item.IsTeacher == true)
+                    @if (context.Item.IsEmployee == true)
                     {
                         @("-")
                     }
@@ -80,7 +80,7 @@
                 <Columns>
                     <PropertyColumn Property="x => x.Name" Title="Product Name" />
                     <PropertyColumn Property="x => x.Quantity" Title="Quantity" />
-                    @if (!TransactionToOpen.IsTeacher)
+                    @if (!TransactionToOpen.IsEmployee)
                     {
                         <PropertyColumn Property="x => x.Price" Title="Price">
                             <CellTemplate Context="ctx">
@@ -95,7 +95,7 @@
                     }
                 </Columns>
             </MudDataGrid>
-            @if (!TransactionToOpen.IsTeacher)
+            @if (!TransactionToOpen.IsEmployee)
             {
                 <MudStack Row AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Class="mt-3">
                     <MudText Typo="Typo.h6">Total:</MudText>
@@ -138,7 +138,7 @@
                 <Columns>
                     <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
                     <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>
-                    @if (!TransactionToEdit.IsTeacher)
+                    @if (!TransactionToEdit.IsEmployee)
                     {
                         <PropertyColumn Property="x => x.Product.Price" Title="Price">
                             <CellTemplate Context="priceContext">
@@ -208,7 +208,7 @@
 
     <MudDialog @bind-Visible="DeleteDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
         <TitleContent>
-            <MudText Typo="Typo.h6">Delete Teacher?</MudText>
+            <MudText Typo="Typo.h6">Delete Employee?</MudText>
         </TitleContent>
         <DialogContent>
             Are you sure you want to delete <b>@TransactionToDelete.Id</b>?
@@ -264,7 +264,7 @@
         {
             return true;
         }
-        var searchString = $"{transaction.Id} {(transaction.IsTeacher ? "teacher" : "")} {transaction.TeacherName} {transaction.TransactionProductCount} {"Rp. " + transaction.TransactionProductTotalPrice.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))} {transaction.ProcessedByName} {transaction.TimeStamp}".ToLowerInvariant();
+        var searchString = $"{transaction.Id} {(transaction.IsEmployee ? "employee" : "")} {transaction.EmployeeName} {transaction.TransactionProductCount} {"Rp. " + transaction.TransactionProductTotalPrice.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))} {transaction.ProcessedByName} {transaction.TimeStamp}".ToLowerInvariant();
 
         var searchKeywords = SearchKeyword.ToLowerInvariant().Split(" ");
         int countMatch = 0;
@@ -285,8 +285,8 @@
                 {
                     Id = x.Id,
                     TransactionCustomerName = x.CustomerName,
-                    IsTeacher = (x.TeacherId != null),
-                    TeacherName = x.Teacher != null ? x.Teacher.Name : string.Empty,
+                    IsEmployee = (x.EmployeeId != null),
+                    EmployeeName = x.Employee != null ? x.Employee.Name : string.Empty,
                     TransactionProductCount = x.TransactionProducts.Count,
                     TransactionProductTotalPrice = x.TransactionProducts.Sum(x => x.Price * x.Quantity),
                     ProcessedByName = x.ProcessedBy.Name,
@@ -301,8 +301,8 @@
     {
         public int Id { get; set; }
         public string TransactionCustomerName { get; set; } = "";
-        public bool IsTeacher { get; set; }
-        public string TeacherName { get; set; } = "";
+        public bool IsEmployee { get; set; }
+        public string EmployeeName { get; set; } = "";
         public int TransactionProductCount { get; set; }
         public long TransactionProductTotalPrice { get; set; }
         public string ProcessedByName { get; set; } = "";
@@ -429,7 +429,7 @@
                 ProductId = cart.Product.Id,
                 Name = cart.Product.Name,
                 Barcode = cart.Product.Barcode,
-                Price = TransactionToEdit.IsTeacher ? 0 : cart.Product.Price,
+                Price = TransactionToEdit.IsEmployee ? 0 : cart.Product.Price,
                 Quantity = cart.Quantity
             });
             var prod = await db.Products.FirstOrDefaultAsync(p => p.Id == cart.Product.Id);

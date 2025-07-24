@@ -66,7 +66,7 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     Name = table.Column<string>(type: "text", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     Price = table.Column<long>(type: "bigint", nullable: false),
-                    CanBeBoughtByTeachers = table.Column<bool>(type: "boolean", nullable: false),
+                    CanBeBoughtByEmployees = table.Column<bool>(type: "boolean", nullable: false),
                     CanBeBoughtByStudents = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -75,7 +75,7 @@ namespace NeoGlobalWarehouseSystem.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Teachers",
+                name: "Employees",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -85,7 +85,7 @@ namespace NeoGlobalWarehouseSystem.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Teachers", x => x.Id);
+                    table.PrimaryKey("PK_Employees", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -236,9 +236,9 @@ namespace NeoGlobalWarehouseSystem.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Transactions_Teachers_TeacherId",
+                        name: "FK_Transactions_Employees_TeacherId",
                         column: x => x.TeacherId,
-                        principalTable: "Teachers",
+                        principalTable: "Employees",
                         principalColumn: "Id");
                 });
 
@@ -372,7 +372,7 @@ namespace NeoGlobalWarehouseSystem.Migrations
                 name: "AspNetUsers");
 
             migrationBuilder.DropTable(
-                name: "Teachers");
+                name: "Employees");
         }
     }
 }
