@@ -10,7 +10,7 @@ namespace NeoGlobalWarehouseSystem.Data
     {
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductInputLog> ProductInputLogs { get; set; }
-        public DbSet<Teacher> Teachers { get; set; }
+        public DbSet<Employee> Teachers { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<TransactionProduct> TransactionProducts { get; set; }
     }

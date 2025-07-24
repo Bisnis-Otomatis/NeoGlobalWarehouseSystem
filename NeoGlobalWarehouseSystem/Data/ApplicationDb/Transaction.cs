@@ -12,7 +12,7 @@ namespace NeoGlobalWarehouseSystem.Data.ApplicationDb
 
         public string CustomerName { get; set; } = "";
 
-        public Teacher? Teacher { get; set; }
+        public Employee? Teacher { get; set; }
         public int? TeacherId { get; set; }
 
         public DateTime TimeStamp { get; set; } = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);

@@ -36,7 +36,7 @@
     bool NewTeacherExpanded = false;
     TeacherList TeachersList = new();
 
-    public async Task AddTeacher(Data.ApplicationDb.Teacher teacher)
+    public async Task AddTeacher(Data.ApplicationDb.Employee teacher)
     {
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
         await db.Teachers.AddAsync(teacher);

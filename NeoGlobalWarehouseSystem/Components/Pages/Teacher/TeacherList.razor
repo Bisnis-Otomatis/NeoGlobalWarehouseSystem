@@ -68,15 +68,15 @@
 
 @code {
     string SearchKeyword { get; set; } = string.Empty;
-    List<Data.ApplicationDb.Teacher> Teachers { get; set; } = new();
+    List<Data.ApplicationDb.Employee> Teachers { get; set; } = new();
 
     bool EditDialogVisible { get; set; }
-    Data.ApplicationDb.Teacher TeacherToEdit { get; set; } = new();
+    Data.ApplicationDb.Employee TeacherToEdit { get; set; } = new();
 
     bool DeleteDialogVisible { get; set; }
-    Data.ApplicationDb.Teacher TeacherToDelete { get; set; } = new();
+    Data.ApplicationDb.Employee TeacherToDelete { get; set; } = new();
 
-    public bool PerformSearch(Data.ApplicationDb.Teacher teacher)
+    public bool PerformSearch(Data.ApplicationDb.Employee teacher)
     {
         if (string.IsNullOrWhiteSpace(SearchKeyword))
             return true;
@@ -84,13 +84,13 @@
         return teacher.Name.Contains(SearchKeyword, StringComparison.InvariantCultureIgnoreCase);
     }
 
-    public void OpenEditDialog(Data.ApplicationDb.Teacher teacher)
+    public void OpenEditDialog(Data.ApplicationDb.Employee teacher)
     {
         TeacherToEdit = teacher;
         EditDialogVisible = true;
     }
 
-    public async Task UpdateTeacher(Data.ApplicationDb.Teacher teacher)
+    public async Task UpdateTeacher(Data.ApplicationDb.Employee teacher)
     {
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
         await db.Teachers
@@ -102,7 +102,7 @@
         await FetchTeachers();
     }
 
-    public void OpenDeleteDialog(Data.ApplicationDb.Teacher teacher)
+    public void OpenDeleteDialog(Data.ApplicationDb.Employee teacher)
     {
         TeacherToDelete = teacher;
         DeleteDialogVisible = true;

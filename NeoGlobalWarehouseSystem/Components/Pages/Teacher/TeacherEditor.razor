@@ -13,13 +13,13 @@
     public string Name { get; set; } = string.Empty;
 
     [Parameter]
-    public Data.ApplicationDb.Teacher? Teacher { get; set; }
+    public Data.ApplicationDb.Employee? Teacher { get; set; }
 
     [Parameter]
     public string ButtonName { get; set; } = string.Empty;
 
     [Parameter]
-    public EventCallback<Data.ApplicationDb.Teacher> ProcessedTeacher { get; set; }
+    public EventCallback<Data.ApplicationDb.Employee> ProcessedTeacher { get; set; }
 
     protected override void OnInitialized()
     {

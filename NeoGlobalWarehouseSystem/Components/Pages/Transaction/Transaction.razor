@@ -138,16 +138,19 @@
                 <Columns>
                     <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
                     <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>
-                    <PropertyColumn Property="x => x.Product.Price" Title="Price">
-                        <CellTemplate Context="priceContext">
-                            Rp. @priceContext.Item.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))
-                        </CellTemplate>
-                    </PropertyColumn>
-                    <PropertyColumn Property="@(x => x.Product.Price * x.Quantity)" Title="Total Price">
-                        <CellTemplate Context="totalPriceContext">
-                            Rp. @((totalPriceContext.Item.Product.Price * totalPriceContext.Item.Quantity).ToString("N0", CultureInfo.GetCultureInfo("id-ID")))
-                        </CellTemplate>
-                    </PropertyColumn>
+                    @if (!TransactionToEdit.IsTeacher)
+                    {
+                        <PropertyColumn Property="x => x.Product.Price" Title="Price">
+                            <CellTemplate Context="priceContext">
+                                Rp. @priceContext.Item.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("id-ID"))
+                            </CellTemplate>
+                        </PropertyColumn>
+                        <PropertyColumn Property="@(x => x.Product.Price * x.Quantity)" Title="Total Price">
+                            <CellTemplate Context="totalPriceContext">
+                                Rp. @((totalPriceContext.Item.Product.Price * totalPriceContext.Item.Quantity).ToString("N0", CultureInfo.GetCultureInfo("id-ID")))
+                            </CellTemplate>
+                        </PropertyColumn>
+                    }
                     <TemplateColumn Title="Action">
                         <CellTemplate Context="actionContext">
                             <MudStack Row Spacing="0">
@@ -243,7 +246,7 @@
     int EditNewQuantity { get; set; }
     bool EditCartDialogVisible { get; set; } = false;
     bool DeleteCartDialogVisible { get; set; } = false;
-    int EditMaxEditableQuantity => EditCartItemToEdit?.Product.Quantity ?? 1;
+    int EditMaxEditableQuantity => EditCartItemToEdit == null ? 1 : EditCartItemToEdit.Product.Quantity + EditCartItemToEdit.Quantity;
 
     bool DeleteDialogVisible { get; set; }
     TransactionDTO TransactionToDelete { get; set; } = new();
@@ -404,10 +407,20 @@
     public async void SaveEditTransaction()
     {
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
-        // Hapus produk lama
-        var oldProducts = db.TransactionProducts.Where(x => x.TransactionId == TransactionToEdit.Id);
+        // Ambil produk lama
+        var oldProducts = await db.TransactionProducts.Where(x => x.TransactionId == TransactionToEdit.Id).ToListAsync();
+        // Kembalikan stok produk lama
+        foreach (var old in oldProducts)
+        {
+            var prod = await db.Products.FirstOrDefaultAsync(p => p.Id == old.ProductId);
+            if (prod != null)
+            {
+                prod.Quantity += old.Quantity;
+            }
+        }
         db.TransactionProducts.RemoveRange(oldProducts);
-        // Tambahkan produk baru
+        await db.SaveChangesAsync();
+        // Tambahkan produk baru dan kurangi stok
         foreach (var cart in EditCart)
         {
             db.TransactionProducts.Add(new TransactionProduct
@@ -416,9 +429,15 @@
                 ProductId = cart.Product.Id,
                 Name = cart.Product.Name,
                 Barcode = cart.Product.Barcode,
-                Price = cart.Product.Price,
+                Price = TransactionToEdit.IsTeacher ? 0 : cart.Product.Price,
                 Quantity = cart.Quantity
             });
+            var prod = await db.Products.FirstOrDefaultAsync(p => p.Id == cart.Product.Id);
+            if (prod != null)
+            {
+                prod.Quantity -= cart.Quantity;
+                if (prod.Quantity < 0) prod.Quantity = 0;
+            }
         }
         await db.SaveChangesAsync();
         Snackbar.Add("Transaction updated successfully", Severity.Success);

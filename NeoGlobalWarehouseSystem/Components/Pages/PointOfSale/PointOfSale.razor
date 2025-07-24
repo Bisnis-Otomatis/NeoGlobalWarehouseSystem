@@ -168,11 +168,12 @@
                 Name = cart.Product.Name,
                 Barcode = cart.Product.Barcode,
                 Price = cart.Product.Price,
-                Quantity = cart.Product.Quantity,
+                Quantity = cart.Quantity,
                 ProductId = cart.Product.Id
             });
 
-            await applicationDbContext.Products.Where(x => x.Id == cart.Product.Id).ExecuteUpdateAsync(setter => setter.SetProperty(x => x.Quantity, x => x.Quantity - 3));
+            await applicationDbContext.Products.Where(x => x.Id == cart.Product.Id)
+                .ExecuteUpdateAsync(setter => setter.SetProperty(x => x.Quantity, x => x.Quantity - cart.Quantity));
         }
 
         await applicationDbContext.Transactions.AddAsync(new Transaction()
