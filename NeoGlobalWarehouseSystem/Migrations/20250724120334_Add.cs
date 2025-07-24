@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NeoGlobalWarehouseSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class AddNew : Migration
+    public partial class Add : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -57,6 +57,21 @@ namespace NeoGlobalWarehouseSystem.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Employees",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    IdCardNumber = table.Column<string>(type: "text", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Employees", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Products",
                 columns: table => new
                 {
@@ -66,26 +81,12 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     Name = table.Column<string>(type: "text", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     Price = table.Column<long>(type: "bigint", nullable: false),
-                    CanBeBoughtByEmployees = table.Column<bool>(type: "boolean", nullable: false),
-                    CanBeBoughtByStudents = table.Column<bool>(type: "boolean", nullable: false)
+                    CanBeBoughtByStudents = table.Column<bool>(type: "boolean", nullable: false),
+                    CanBeBoughtByEmployeeTypes = table.Column<int[]>(type: "integer[]", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Products", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Employees",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    IdCardNumber = table.Column<string>(type: "text", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Employees", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -195,6 +196,33 @@ namespace NeoGlobalWarehouseSystem.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Transactions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ProcessedById = table.Column<int>(type: "integer", nullable: false),
+                    CustomerName = table.Column<string>(type: "text", nullable: false),
+                    EmployeeId = table.Column<int>(type: "integer", nullable: true),
+                    TimeStamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Transactions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Transactions_AspNetUsers_ProcessedById",
+                        column: x => x.ProcessedById,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Transactions_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ProductInputLogs",
                 columns: table => new
                 {
@@ -213,33 +241,6 @@ namespace NeoGlobalWarehouseSystem.Migrations
                         principalTable: "Products",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Transactions",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ProcessedById = table.Column<int>(type: "integer", nullable: false),
-                    CustomerName = table.Column<string>(type: "text", nullable: false),
-                    TeacherId = table.Column<int>(type: "integer", nullable: true),
-                    TimeStamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Transactions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Transactions_AspNetUsers_ProcessedById",
-                        column: x => x.ProcessedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Transactions_Employees_TeacherId",
-                        column: x => x.TeacherId,
-                        principalTable: "Employees",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -325,14 +326,14 @@ namespace NeoGlobalWarehouseSystem.Migrations
                 column: "TransactionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Transactions_EmployeeId",
+                table: "Transactions",
+                column: "EmployeeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Transactions_ProcessedById",
                 table: "Transactions",
                 column: "ProcessedById");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Transactions_TeacherId",
-                table: "Transactions",
-                column: "TeacherId");
         }
 
         /// <inheritdoc />

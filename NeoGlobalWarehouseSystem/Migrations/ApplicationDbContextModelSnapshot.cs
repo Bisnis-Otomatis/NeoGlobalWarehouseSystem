@@ -154,6 +154,30 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("IdCardNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Employees");
+                });
+
             modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -166,10 +190,11 @@ namespace NeoGlobalWarehouseSystem.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("CanBeBoughtByStudents")
-                        .HasColumnType("boolean");
+                    b.Property<int[]>("CanBeBoughtByEmployeeTypes")
+                        .IsRequired()
+                        .HasColumnType("integer[]");
 
-                    b.Property<bool>("CanBeBoughtByEmployees")
+                    b.Property<bool>("CanBeBoughtByStudents")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
@@ -211,27 +236,6 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     b.ToTable("ProductInputLogs");
                 });
 
-            modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Teacher", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("IdCardNumber")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Employees");
-                });
-
             modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Transaction", b =>
                 {
                     b.Property<int>("Id")
@@ -244,10 +248,10 @@ namespace NeoGlobalWarehouseSystem.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("ProcessedById")
+                    b.Property<int?>("EmployeeId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("TeacherId")
+                    b.Property<int>("ProcessedById")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("TimeStamp")
@@ -255,9 +259,9 @@ namespace NeoGlobalWarehouseSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProcessedById");
+                    b.HasIndex("EmployeeId");
 
-                    b.HasIndex("TeacherId");
+                    b.HasIndex("ProcessedById");
 
                     b.ToTable("Transactions");
                 });
@@ -441,19 +445,19 @@ namespace NeoGlobalWarehouseSystem.Migrations
 
             modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Transaction", b =>
                 {
+                    b.HasOne("NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee", "Employee")
+                        .WithMany("Transactions")
+                        .HasForeignKey("EmployeeId");
+
                     b.HasOne("NeoGlobalWarehouseSystem.Data.ApplicationDb.User", "ProcessedBy")
                         .WithMany("Transactions")
                         .HasForeignKey("ProcessedById")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("NeoGlobalWarehouseSystem.Data.ApplicationDb.Teacher", "Teacher")
-                        .WithMany("Transactions")
-                        .HasForeignKey("TeacherId");
+                    b.Navigation("Employee");
 
                     b.Navigation("ProcessedBy");
-
-                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.TransactionProduct", b =>
@@ -475,16 +479,16 @@ namespace NeoGlobalWarehouseSystem.Migrations
                     b.Navigation("Transaction");
                 });
 
+            modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
             modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Product", b =>
                 {
                     b.Navigation("ProductInputLog");
 
                     b.Navigation("TransactionProducts");
-                });
-
-            modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Teacher", b =>
-                {
-                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("NeoGlobalWarehouseSystem.Data.ApplicationDb.Transaction", b =>

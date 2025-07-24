@@ -15,10 +15,13 @@
             <MudCheckBox @bind-Value="CanBeBoughtByEmployees" Label="Employees"></MudCheckBox>
             @if (CanBeBoughtByEmployees)
             {
-                <MudSelect T="EmployeeType" @bind-SelectedValues="SelectedEmployeeTypes" MultiSelection="true" Label="Employee Types">
+                <MudSelect T="EmployeeType" SelectedValues="SelectedEmployeeTypes" MultiSelection="true" Label="Employee Types" @ref="employeeTypeSelect">
                     @foreach (var type in Enum.GetValues<EmployeeType>())
                     {
-                        <MudSelectItem Value="@type">@type.ToString()</MudSelectItem>
+                        if (type != EmployeeType.None)
+                        {
+                            <MudSelectItem Value="@type" OnClick="() => CloseEmployeeTypeSelect()">@type.ToString()</MudSelectItem>
+                        }
                     }
                 </MudSelect>
             }
@@ -37,6 +40,7 @@
     public bool CanBeBoughtByStudents;
     public bool CanBeBoughtByEmployees;
     public List<EmployeeType> SelectedEmployeeTypes = new();
+    MudSelect<EmployeeType>? employeeTypeSelect;
 
     [Parameter]
     public NeoGlobalWarehouseSystem.Data.ApplicationDb.Product? Product { get; set; }
@@ -91,5 +95,10 @@
         CanBeBoughtByStudents = false;
         CanBeBoughtByEmployees = false;
         SelectedEmployeeTypes.Clear();
+    }
+
+    void CloseEmployeeTypeSelect()
+    {
+        employeeTypeSelect?.CloseMenu();
     }
 }

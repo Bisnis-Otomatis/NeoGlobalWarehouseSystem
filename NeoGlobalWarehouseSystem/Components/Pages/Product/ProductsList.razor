@@ -27,13 +27,17 @@
             </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="x => x.Product.CanBeBoughtByEmployeeTypes" Title="Employee Types">
-            <CellTemplate>
-                @if (context.Item.Product.CanBeBoughtByEmployeeTypes != null && context.Item.Product.CanBeBoughtByEmployeeTypes.Count > 0)
-                {
-                    @string.Join(", ", context.Item.Product.CanBeBoughtByEmployeeTypes)
-                }
-            </CellTemplate>
-        </PropertyColumn>
+    <CellTemplate>
+        @if (context.Item.Product.CanBeBoughtByEmployeeTypes != null && context.Item.Product.CanBeBoughtByEmployeeTypes.Count > 0)
+        {
+            @string.Join(", ", context.Item.Product.CanBeBoughtByEmployeeTypes.Select(e => e.ToString()))
+        }
+        else
+        {
+            <span>-</span>
+        }
+    </CellTemplate>
+</PropertyColumn>
 
         @if (IsShorterTable)
         {
@@ -149,6 +153,8 @@
                 .SetProperty(x => x.CanBeBoughtByStudents, product.CanBeBoughtByStudents)
                 .SetProperty(x => x.CanBeBoughtByEmployeeTypes, product.CanBeBoughtByEmployeeTypes)
             );
+
+        await FetchProducts(); // Refresh list setelah update
 
         EditDialogIsVisible = false;
         Snackbar.Add("Product has been succesfully updated", Severity.Success);
