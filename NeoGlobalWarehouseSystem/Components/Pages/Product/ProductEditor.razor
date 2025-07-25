@@ -31,16 +31,6 @@
     </MudStack>
 </MudPaper>
 
-<MudText>
-    @foreach (var type in SelectedEmployeeTypes)
-    {
-        if (type != EmployeeType.None)
-        {
-            <span>@type.ToString()</span>
-        }
-    }
-</MudText>
-
 @code {
     CultureInfo CultureInfo = new("id-ID", false);
     public string Name = string.Empty;

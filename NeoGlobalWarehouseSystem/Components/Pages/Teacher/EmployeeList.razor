@@ -15,7 +15,11 @@
     <Columns>
         <PropertyColumn Property="x => x.Id" Title="ID" />
         <PropertyColumn Property="x => x.Name" Title="Name" />
-
+        <TemplateColumn Title="Employee Type">
+            <CellTemplate>
+                @SplitPascalCase(context.Item.Type.ToString())
+            </CellTemplate>
+        </TemplateColumn>
         <TemplateColumn Title="Action">
             <CellTemplate>
                 <MudStack Row Spacing="0">
@@ -95,7 +99,8 @@
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
         await db.Employees
                 .Where(t => t.Id == employee.Id)
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Name, employee.Name));
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Name, employee.Name)
+                                           .SetProperty(t => t.Type, employee.Type));
 
         EditDialogVisible = false;
         Snackbar.Add("Employee has been successfully updated", Severity.Success);
@@ -128,5 +133,18 @@
     protected override async Task OnInitializedAsync()
     {
         await FetchEmployees();
+    }
+
+    string SplitPascalCase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return input;
+        var result = new System.Text.StringBuilder();
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(input[i]) && !char.IsWhiteSpace(input[i - 1]))
+                result.Append(' ');
+            result.Append(input[i]);
+        }
+        return result.ToString();
     }
 }

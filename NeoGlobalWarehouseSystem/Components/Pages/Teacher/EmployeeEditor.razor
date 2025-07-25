@@ -1,6 +1,15 @@
 ﻿<MudPaper Class="pa-5 ma-1" Elevation="3">
     <MudStack Spacing="3">
         <MudTextField @bind-Value="Name" Label="Employee Name" Required="true" />
+        <MudSelect T="Data.ApplicationDb.EmployeeType" @bind-Value="Type" Label="Employee Type" Required="true">
+            @foreach (var type in Enum.GetValues<Data.ApplicationDb.EmployeeType>())
+            {
+                if (type != Data.ApplicationDb.EmployeeType.None)
+                {
+                    <MudSelectItem Value="@type">@SplitPascalCase(type.ToString())</MudSelectItem>
+                }
+            }
+        </MudSelect>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    OnClick="ReturnEmployee">
@@ -11,6 +20,7 @@
 
 @code {
     public string Name { get; set; } = string.Empty;
+    public Data.ApplicationDb.EmployeeType Type { get; set; } = Data.ApplicationDb.EmployeeType.None;
 
     [Parameter]
     public Data.ApplicationDb.Employee? Employee { get; set; }
@@ -26,7 +36,10 @@
         if (Employee == null)
             Employee = new();
         else
+        {
             Name = Employee.Name;
+            Type = Employee.Type;
+        }
     }
 
     public async Task ReturnEmployee()
@@ -35,6 +48,7 @@
             return;
 
         Employee.Name = Name.Trim();
+        Employee.Type = Type;
         await ProcessedEmployee.InvokeAsync(Employee);
 
         ResetFields();
@@ -44,5 +58,19 @@
     {
         Employee = new();
         Name = string.Empty;
+        Type = Data.ApplicationDb.EmployeeType.None;
+    }
+
+    string SplitPascalCase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return input;
+        var result = new System.Text.StringBuilder();
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(input[i]) && !char.IsWhiteSpace(input[i - 1]))
+                result.Append(' ');
+            result.Append(input[i]);
+        }
+        return result.ToString();
     }
 }
