@@ -1,0 +1,223 @@
+﻿@page "/account-management"
+@inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
+@inject UserManager<User> UserManager
+@inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+
+<MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
+    <AuthorizeView Context="context">
+        @{
+            var currentUserId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h5">Account Management</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">New User</MudButton>
+        </MudStack>
+        <MudDataGrid Items="@Users" Class="mt-4" Dense="true" Hover="true">
+            <Columns>
+                <PropertyColumn Property="x => x.Id" Title="ID" />
+                <PropertyColumn Property="x => x.Name" Title="Name" />
+                <PropertyColumn Property="x => x.Email" Title="Email" />
+                <PropertyColumn Property="x => x.IdCardNumber" Title="ID Card" />
+                <PropertyColumn Property="x => x.Role" Title="Role" />
+                <TemplateColumn Title="Actions">
+                    <CellTemplate Context="ctx">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => OpenEditDialog(ctx.Item, currentUserId))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" Disabled="@(ctx.Item.Id.ToString() == currentUserId)" OnClick="@(() => OpenDeleteDialog(ctx.Item))" />
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    </AuthorizeView>
+</MudContainer>
+
+<MudDialog @bind-Visible="CreateEditDialogVisible" Options="new DialogOptions() { MaxWidth = MaxWidth.ExtraExtraLarge }" Style="width: 400px;">
+    <DialogContent>
+        <MudText Typo="Typo.h6">@((IsEditMode ? "Edit" : "Create") + " User")</MudText>
+        <EditForm Model="UserInput" OnValidSubmit="@(IsEditMode ? UpdateUser : CreateUser)">
+            <DataAnnotationsValidator />
+            <MudTextField @bind-Value="UserInput.Name" Label="Name" Required="true" Class="mt-2" />
+            <MudTextField @bind-Value="UserInput.Email" Label="Email" Required="true" Class="mt-2" />
+            <MudTextField @bind-Value="UserInput.IdCardNumber" Label="ID Card Number" Required="true" Class="mt-2" />
+            <MudSelect T="UserRole" @bind-Value="UserInput.Role" Label="Role" Required="true" Class="mt-2" Disabled="@IsRoleEditDisabled">
+                @foreach (UserRole role in Enum.GetValues(typeof(UserRole)))
+                {
+                    <MudSelectItem Value="@role">@role</MudSelectItem>
+                }
+            </MudSelect>
+            @if (!IsEditMode)
+            {
+                <MudTextField @bind-Value="UserInput.Password" Label="Password" InputType="InputType.Password" Required="true" Class="mt-2" />
+                <MudTextField @bind-Value="UserInput.ConfirmPassword" Label="Confirm Password" InputType="InputType.Password" Required="true" Class="mt-2" />
+            }
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(IsEditMode ? UpdateUser : CreateUser)" Disabled="@GetUpdateButtonDisabled()">@((IsEditMode ? "Update" : "Create"))</MudButton>
+        <MudButton Variant="Variant.Text" OnClick="CloseDialog">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="DeleteDialogVisible" Options="new DialogOptions() { MaxWidth = MaxWidth.ExtraSmall }">
+    <DialogContent>
+        <MudText Typo="Typo.h6">Delete User?</MudText>
+        Are you sure you want to delete <b>@UserToDelete?.Name</b>?
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="DeleteUser" Disabled="@(UserToDelete != null && UserToDelete.Id.ToString() == CurrentUserId)">Delete</MudButton>
+        <MudButton Variant="Variant.Text" OnClick="() => DeleteDialogVisible = false">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    public class UserInputModel
+    {
+        [Required]
+        public string Name { get; set; } = string.Empty;
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+        [Required]
+        public string IdCardNumber { get; set; } = string.Empty;
+        [Required]
+        public UserRole Role { get; set; } = UserRole.Cashier;
+        public string Password { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    List<User> Users = new();
+    bool CreateEditDialogVisible = false;
+    bool DeleteDialogVisible = false;
+    bool IsEditMode = false;
+    UserInputModel UserInput = new();
+    User? UserToEdit;
+    User? UserToDelete;
+    string? CurrentUserId;
+    bool IsRoleEditDisabled = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchUsers();
+    }
+
+    async Task FetchUsers()
+    {
+        await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
+        Users = await db.Users.ToListAsync();
+        StateHasChanged();
+    }
+
+    void OpenCreateDialog()
+    {
+        IsEditMode = false;
+        UserInput = new UserInputModel();
+        IsRoleEditDisabled = false;
+        CreateEditDialogVisible = true;
+    }
+
+    void OpenEditDialog(User user, string? currentUserId)
+    {
+        if (user.Email == null) return;
+        IsEditMode = true;
+        UserToEdit = user;
+        UserInput = new UserInputModel
+        {
+            Name = user.Name,
+            Email = user.Email,
+            IdCardNumber = user.IdCardNumber,
+            Role = user.Role
+        };
+        IsRoleEditDisabled = (user.Id.ToString() == currentUserId);
+        CreateEditDialogVisible = true;
+    }
+
+    void OpenDeleteDialog(User user)
+    {
+        UserToDelete = user;
+        DeleteDialogVisible = true;
+    }
+
+    void CloseDialog()
+    {
+        CreateEditDialogVisible = false;
+        UserToEdit = null;
+    }
+
+    async Task CreateUser()
+    {
+        if (UserInput.Password != UserInput.ConfirmPassword)
+        {
+            Snackbar.Add("Passwords do not match", Severity.Error);
+            return;
+        }
+        var user = new User
+        {
+            Name = UserInput.Name,
+            Email = UserInput.Email,
+            UserName = UserInput.Email,
+            IdCardNumber = UserInput.IdCardNumber,
+            Role = UserInput.Role
+        };
+        var result = await UserManager.CreateAsync(user, UserInput.Password);
+        if (result.Succeeded)
+        {
+            Snackbar.Add("User created successfully", Severity.Success);
+            CreateEditDialogVisible = false;
+            await FetchUsers();
+        }
+        else
+        {
+            Snackbar.Add(string.Join(", ", result.Errors.Select(e => e.Description)), Severity.Error);
+        }
+    }
+
+    async Task UpdateUser()
+    {
+        if (UserToEdit == null) return;
+        if (IsRoleEditDisabled)
+        {
+            Snackbar.Add("You cannot change your own role.", Severity.Error);
+            return;
+        }
+        UserToEdit.Name = UserInput.Name;
+        UserToEdit.Email = UserInput.Email;
+        UserToEdit.UserName = UserInput.Email;
+        UserToEdit.IdCardNumber = UserInput.IdCardNumber;
+        UserToEdit.Role = UserInput.Role;
+        var result = await UserManager.UpdateAsync(UserToEdit);
+        if (result.Succeeded)
+        {
+            Snackbar.Add("User updated successfully", Severity.Success);
+            CreateEditDialogVisible = false;
+            await FetchUsers();
+        }
+        else
+        {
+            Snackbar.Add(string.Join(", ", result.Errors.Select(e => e.Description)), Severity.Error);
+        }
+    }
+
+    async Task DeleteUser()
+    {
+        if (UserToDelete == null) return;
+        if (UserToDelete.Id.ToString() == CurrentUserId)
+        {
+            Snackbar.Add("You cannot delete your own account.", Severity.Error);
+            return;
+        }
+        var result = await UserManager.DeleteAsync(UserToDelete);
+        if (result.Succeeded)
+        {
+            Snackbar.Add("User deleted successfully", Severity.Success);
+            DeleteDialogVisible = false;
+            await FetchUsers();
+        }
+        else
+        {
+            Snackbar.Add(string.Join(", ", result.Errors.Select(e => e.Description)), Severity.Error);
+        }
+    }
+
+    bool GetUpdateButtonDisabled() => IsEditMode && IsRoleEditDisabled;
+}
