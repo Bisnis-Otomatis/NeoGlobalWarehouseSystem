@@ -15,12 +15,12 @@
             <MudCheckBox @bind-Value="CanBeBoughtByEmployees" Label="Employees"></MudCheckBox>
             @if (CanBeBoughtByEmployees)
             {
-                <MudSelect T="EmployeeType" SelectedValues="SelectedEmployeeTypes" MultiSelection="true" Label="Employee Types" @ref="employeeTypeSelect">
+                <MudSelect T="EmployeeType" SelectedValues="SelectedEmployeeTypes" SelectedValuesChanged="x => SelectedEmployeeTypes = x.Distinct().ToList()" MultiSelection="true" Label="Employee Types">
                     @foreach (var type in Enum.GetValues<EmployeeType>())
                     {
                         if (type != EmployeeType.None)
                         {
-                            <MudSelectItem Value="@type" OnClick="() => CloseEmployeeTypeSelect()">@type.ToString()</MudSelectItem>
+                            <MudSelectItem Value="@type">@SplitPascalCase(type.ToString())</MudSelectItem>
                         }
                     }
                 </MudSelect>
@@ -31,6 +31,16 @@
     </MudStack>
 </MudPaper>
 
+<MudText>
+    @foreach (var type in SelectedEmployeeTypes)
+    {
+        if (type != EmployeeType.None)
+        {
+            <span>@type.ToString()</span>
+        }
+    }
+</MudText>
+
 @code {
     CultureInfo CultureInfo = new("id-ID", false);
     public string Name = string.Empty;
@@ -40,7 +50,6 @@
     public bool CanBeBoughtByStudents;
     public bool CanBeBoughtByEmployees;
     public List<EmployeeType> SelectedEmployeeTypes = new();
-    MudSelect<EmployeeType>? employeeTypeSelect;
 
     [Parameter]
     public NeoGlobalWarehouseSystem.Data.ApplicationDb.Product? Product { get; set; }
@@ -69,6 +78,19 @@
         }
     }
 
+    string SplitPascalCase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return input;
+        var result = new System.Text.StringBuilder();
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(input[i]) && !char.IsWhiteSpace(input[i - 1]))
+                result.Append(' ');
+            result.Append(input[i]);
+        }
+        return result.ToString();
+    }
+
     public async Task ReturnProduct()
     {
         if (Product != null)
@@ -95,10 +117,5 @@
         CanBeBoughtByStudents = false;
         CanBeBoughtByEmployees = false;
         SelectedEmployeeTypes.Clear();
-    }
-
-    void CloseEmployeeTypeSelect()
-    {
-        employeeTypeSelect?.CloseMenu();
     }
 }
