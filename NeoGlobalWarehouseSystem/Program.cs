@@ -49,35 +49,8 @@ namespace NeoGlobalWarehouseSystem
 
             var app = builder.Build();
 
-            // Seed admin user if not exists
-            using (var scope = app.Services.CreateScope())
-            {
-                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                var adminEmail = "evanderanatanael144@gmail.com";
-                var adminPassword = "Evander155";
-                var adminUser = await userManager.FindByEmailAsync(adminEmail);
-                if (adminUser == null)
-                {
-                    var user = new User
-                    {
-                        UserName = adminEmail,
-                        Email = adminEmail,
-                        EmailConfirmed = true,
-                        Role = UserRole.Admin,
-                        Name = "Evander",
-                        IdCardNumber = "2171030905010008"
-                    };
-                    var result = await userManager.CreateAsync(user, adminPassword);
-                    if (result.Succeeded)
-                    {
-                        // Optionally, update the Role property if not set by default
-                        user.Role = UserRole.Admin;
-                        await userManager.UpdateAsync(user);
-                    }
-                    // Optionally, handle errors (e.g., log them)
-                }
-            }
+            // Initialize database and seed admin user
+            await InitializeDatabaseAsync(app);
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -90,8 +63,6 @@ namespace NeoGlobalWarehouseSystem
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-
-
 
             app.UseHttpsRedirection();
 
@@ -106,6 +77,84 @@ namespace NeoGlobalWarehouseSystem
             app.MapAdditionalIdentityEndpoints();
 
             app.Run();
+        }
+
+        private static async Task InitializeDatabaseAsync(WebApplication app)
+        {
+            using var scope = app.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var logger = services.GetRequiredService<ILogger<Program>>();
+
+            try
+            {
+                // Get database context and apply migrations
+                var context = services.GetRequiredService<ApplicationDbContext>();
+                await context.Database.MigrateAsync();
+                logger.LogInformation("Database migrations applied successfully.");
+
+                // Seed admin user
+                await SeedAdminUserAsync(services, logger);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while initializing the database.");
+                throw;
+            }
+        }
+
+        private static async Task SeedAdminUserAsync(IServiceProvider services, ILogger logger)
+        {
+            try
+            {
+                var userManager = services.GetRequiredService<UserManager<User>>();
+                
+                const string adminEmail = "evandernatanael144@gmail.com";
+                const string adminPassword = "Evander_155";
+                
+                var adminUser = await userManager.FindByEmailAsync(adminEmail);
+                
+                if (adminUser == null)
+                {
+                    logger.LogInformation("Creating admin user...");
+                    
+                    var user = new User
+                    {
+                        UserName = adminEmail,
+                        Email = adminEmail,
+                        EmailConfirmed = true,
+                        Role = UserRole.Admin,
+                        Name = "Evander",
+                        IdCardNumber = "2171030905010008"
+                    };
+                    
+                    var result = await userManager.CreateAsync(user, adminPassword);
+                    
+                    if (result.Succeeded)
+                    {
+                        logger.LogInformation("Admin user created successfully.");
+                        
+                        // Ensure the Role property is set correctly
+                        user.Role = UserRole.Admin;
+                        await userManager.UpdateAsync(user);
+                        
+                        logger.LogInformation("Admin user role updated successfully.");
+                    }
+                    else
+                    {
+                        var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                        logger.LogError("Failed to create admin user. Errors: {Errors}", errors);
+                    }
+                }
+                else
+                {
+                    logger.LogInformation("Admin user already exists.");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while seeding the admin user.");
+                throw;
+            }
         }
     }
 }
