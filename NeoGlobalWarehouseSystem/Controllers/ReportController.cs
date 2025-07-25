@@ -99,7 +99,10 @@ namespace NeoGlobalWarehouseSystem.Controllers
                                 }
                                 else
                                 {
-                                    col.Item().Text($"Employee: {tx.Employee?.Name}");
+                                    // Format: Nama (EmployeeType) dengan spasi sebelum kurung
+                                    var employeeName = tx.Employee?.Name ?? "";
+                                    var employeeType = tx.Employee?.Type.ToString() ?? "";
+                                    col.Item().Text($"Employee: {employeeName} ({employeeType})");
                                 }
                                 col.Item().Text($"Processed By: {tx.ProcessedBy.Name}");
                                 col.Item().Table(table =>

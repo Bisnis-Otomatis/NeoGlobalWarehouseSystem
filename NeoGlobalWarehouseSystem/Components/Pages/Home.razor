@@ -1,13 +1,177 @@
 ﻿@page "/"
 
 @using Microsoft.AspNetCore.Authorization
-
 @attribute [Authorize]
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Dashboard</PageTitle>
 
-<AuthorizeView>
-    <h1>Hello, world!</h1>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudText Typo="Typo.h4" GutterBottom="true">Welcome to Neo Global Warehouse System!</MudText>
+    <MudText Typo="Typo.h6" id="quote-fade" class="quote-fade mb-2">@CurrentQuote</MudText>
 
-    Welcome to your new app.
-</AuthorizeView>
+    <MudPaper Class="mb-6 pa-4">
+        <MudText Typo="Typo.h6" Class="mb-2">Total Transactions Processed in Last 30 Days</MudText>
+        <MudChart ChartType="ChartType.Line" ChartSeries="@_series" XAxisLabels="@_xAxisLabels" Width="1200px" Height="350px" ChartOptions="@_options" AxisChartOptions="_axisChartOptions" />
+    </MudPaper>
+
+    <MudGrid Gutter="Size.Large">
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Class="hover-elevation-6" Style="cursor:pointer" @onclick="@(() => NavigationManager.NavigateTo("/product"))">
+                <MudCardContent>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.AddToQueue" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Products</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2">Manage and view products</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Class="hover-elevation-6" Style="cursor:pointer" @onclick="@(() => NavigationManager.NavigateTo("/employee"))">
+                <MudCardContent>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Badge" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Employees</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2">Employee management</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Class="hover-elevation-6" Style="cursor:pointer" @onclick="@(() => NavigationManager.NavigateTo("/point-of-sales"))">
+                <MudCardContent>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Point of Sales</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2">Process sales transactions</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Class="hover-elevation-6" Style="cursor:pointer" @onclick="@(() => NavigationManager.NavigateTo("/supply-request"))">
+                <MudCardContent>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.AddShoppingCart" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Supply Requests</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2">Request and manage supplies</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Class="hover-elevation-6" Style="cursor:pointer" @onclick="@(() => NavigationManager.NavigateTo("/transaction"))">
+                <MudCardContent>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Transactions</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2">View all transactions</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Class="hover-elevation-6" Style="cursor:pointer" @onclick="@(() => NavigationManager.NavigateTo("/report"))">
+                <MudCardContent>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Dataset" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Reports</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2">Generate and view reports</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
+    [Inject] IJSRuntime JS { get; set; } = default!;
+
+    private List<ChartSeries> _series = new();
+    private string[] _xAxisLabels = new string[0];
+    private ChartOptions _options = new ChartOptions();
+    private AxisChartOptions _axisChartOptions = new AxisChartOptions()
+    {
+        MatchBoundsToSize = true
+    };
+
+    private List<string> _quotes = new()
+    {
+        "成功不是幸福的钥匙，幸福才是成功的钥匙。",
+        "做伟大的工作，唯一的方法就是热爱你所做的事。",
+        "相信自己，你已经成功了一半。",
+        "你的限制，只存在于你的想象中。",
+        "逼自己一把，没有人会替你努力。",
+        "每一次努力，都是幸运的伏笔。",
+        "不为模糊不清的未来担忧，只为清清楚楚的现在努力。",
+        "伟大的事情总是由小事做起。",
+        "坚持下去，成功就在前方。",
+        "机会总是留给有准备的人。",
+        "失败是成功之母。",
+        "只要路是对的，就不怕路远。",
+        "人生没有彩排，每一天都是现场直播。",
+        "不要等待机会，而要创造机会。",
+        "梦想不会逃跑，逃跑的永远是自己。",
+        "你若盛开，清风自来。",
+        "路在脚下，梦在前方。",
+        "不经历风雨，怎能见彩虹。",
+        "心有多大，舞台就有多大。",
+        "有志者，事竟成。"
+    };
+    private int _currentQuoteIndex = 0;
+    private string CurrentQuote => _quotes[_currentQuoteIndex];
+
+    protected override async Task OnInitializedAsync()
+    {
+        ShuffleQuotes();
+        await LoadSalesChartData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("startQuoteFade", _quotes);
+        }
+    }
+
+    private async Task LoadSalesChartData()
+    {
+        var today = DateTime.UtcNow.Date;
+        var fromDate = today.AddDays(-29); // last 30 days including today
+        var dateLabels = Enumerable.Range(0, 30).Select(i => fromDate.AddDays(i)).ToList();
+        var labelStrings = dateLabels.Select(d => d.ToString("MMM dd")).ToArray();
+        var data = new double[30];
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var transactions = await db.Transactions
+            .Where(t => t.TimeStamp >= fromDate && t.TimeStamp <= today.AddDays(1))
+            .ToListAsync();
+
+        foreach (var group in transactions.GroupBy(t => t.TimeStamp.ToUniversalTime().Date))
+        {
+            var idx = (int)(group.Key - fromDate).TotalDays;
+            if (idx >= 0 && idx < 30)
+                data[idx] = group.Count();
+        }
+
+        _series = new List<ChartSeries> {
+            new ChartSeries { Name = "Transactions", Data = data }
+        };
+        _xAxisLabels = labelStrings;
+    }
+
+    private void ShuffleQuotes()
+    {
+        var rng = new Random();
+        int n = _quotes.Count;
+        while (n > 1)
+        {
+            n--;
+            int k = rng.Next(n + 1);
+            ( _quotes[k], _quotes[n] ) = ( _quotes[n], _quotes[k] );
+        }
+    }
+}

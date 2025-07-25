@@ -16,23 +16,6 @@
             <MudIcon Icon="@Icons.Material.Filled.AddBox" /> <MudText Typo="Typo.h6">Add Product</MudText>
         </MudStack>
 
-        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mt-3">
-            <MudCheckBox @bind-Value="IsForStudent" Label="For Students" />
-            <MudCheckBox @bind-Value="IsForEmployee" Label="For Employees" />
-            @if (IsForEmployee)
-            {
-                <MudSelect T="EmployeeType" @bind-Value="SelectedEmployeeType" Label="Employee Type">
-                    @foreach (var type in Enum.GetValues<EmployeeType>())
-                    {
-                        if (type != EmployeeType.None)
-                        {
-                            <MudSelectItem Value="@type">@type.ToString()</MudSelectItem>
-                        }
-                    }
-                </MudSelect>
-            }
-        </MudStack>
-
         <MudFocusTrap>
             <MudAutocomplete T="Data.ApplicationDb.Product" Label="Cari Produk" @bind-Value="ProductSelected" 
                                  SearchFunc="@Search" ToStringFunc="x => x.Name" Class="mt-3" />
@@ -46,7 +29,7 @@
                     </MudCardContent>
                     <MudCardActions>
                         <MudStack Row>
-                            <MudNumericField Style="width:100px;" Variant="Variant.Outlined" @bind-Value="QuantityToOrder" Min="0" Max="@ProductSelected.Quantity"></MudNumericField>
+                            <MudNumericField Style="width:100px;" Variant="Variant.Outlined" Value="@QuantityToOrder" ValueChanged="@((int? value) => OnQuantityChanged(value))" ValueExpression="@(() => QuantityToOrder)" Min="0" Max="@ProductSelected.Quantity"></MudNumericField>
                             <MudButton Variant="Variant.Text" Disabled="@(QuantityToOrder == 0 || ProductSelected.Quantity == 0 || QuantityToOrder == null || QuantityToOrder > ProductSelected.Quantity)" OnClick="AddToCart" Color="Color.Primary" >Add to Cart</MudButton>
                         </MudStack>
                     </MudCardActions>
@@ -144,9 +127,6 @@
     Data.ApplicationDb.Product? ProductSelected { get; set; } = null;
     int? QuantityToOrder = null;
     List<CartItem> Cart { get; set; } = new();
-    bool IsForStudent { get; set; } = true;
-    bool IsForEmployee { get; set; } = false;
-    EmployeeType SelectedEmployeeType { get; set; } = EmployeeType.None;
 
     protected async override Task OnInitializedAsync()
     {
@@ -154,6 +134,14 @@
     }
     async Task ProcessTransaction(string userId)
     {
+        // Validation: Ensure all products in cart are valid for students
+        var invalidProducts = Cart.Where(item => !item.Product.CanBeBoughtByStudents).ToList();
+        if (invalidProducts.Any())
+        {
+            Snackbar.Add("There are products in the cart that are not available for students. Please review your cart.", Severity.Error);
+            return;
+        }
+
         int userIdInt = -1;
         try
         {
@@ -198,6 +186,8 @@
     {
         if (ProductSelected != null && QuantityToOrder != null)
         {
+            if (!ProductSelected.CanBeBoughtByStudents)
+                return;
             bool isFound = false;
             for (int i = 0; i < Cart.Count; i++)
             {
@@ -228,10 +218,7 @@
     async Task LoadProducts()
     {
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
-        Products = await db.Products.Where(x =>
-            (IsForStudent && x.CanBeBoughtByStudents) ||
-            (IsForEmployee && SelectedEmployeeType != EmployeeType.None && x.CanBeBoughtByEmployeeTypes.Contains(SelectedEmployeeType))
-        ).ToListAsync();
+        Products = await db.Products.Where(x => x.CanBeBoughtByStudents).ToListAsync();
     }
 
     async Task<IEnumerable<Data.ApplicationDb.Product>> Search(string value, CancellationToken token)
@@ -282,5 +269,24 @@
             Cart.Remove(CartItemToDelete);
         }
         DeleteDialogVisible = false;
+    }
+
+    string SplitPascalCase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return input;
+        var result = new System.Text.StringBuilder();
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(input[i]) && !char.IsWhiteSpace(input[i - 1]))
+                result.Append(' ');
+            result.Append(input[i]);
+        }
+        return result.ToString();
+    }
+
+    void OnQuantityChanged(int? value)
+    {
+        QuantityToOrder = value;
+        StateHasChanged();
     }
 }
