@@ -9,22 +9,24 @@
 <MudContainer>
     <MudPaper Class="pa-4 mt-4">
         <MudStack Spacing="2">
-            <MudAutocomplete T="string" Label="Report For" @bind-Value="SelectedReportType"
-                             SearchFunc="SearchReportType" ToStringFunc="x => x"
-                             ResetValueOnEmptyText="true" Dense="true" />
-            <MudSelect T="int" Label="Month" @bind-Value="SelectedMonth">
+            <MudSelect T="string" Label="Report For" @bind-Value="SelectedReportType" Dense="true" Class="report-type-select" Style="min-width: 200px; width: 100%;"
+                      Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Close" OnAdornmentClick="ClearReportType" AdornmentColor="Color.Default" AdornmentAriaLabel="Clear selection" AdornmentIconSize="Size.Medium" AdornmentIconStyle="cursor:pointer;" AdornmentIconDisabled="string.IsNullOrEmpty(SelectedReportType)">
+                <MudSelectItem Value="@("customer")">Customer</MudSelectItem>
+                <MudSelectItem Value="@("employee")">Employee</MudSelectItem>
+            </MudSelect>
+            <MudSelect T="int" Label="Month" @bind-Value="SelectedMonth" Class="report-type-select" Style="min-width: 200px; width: 100%;">
                 @foreach (var month in AvailableMonths)
                 {
                     <MudSelectItem Value="@month.Value">@month.Key</MudSelectItem>
                 }
             </MudSelect>
-            <MudSelect T="int" Label="Year" @bind-Value="SelectedYear">
+            <MudSelect T="int" Label="Year" @bind-Value="SelectedYear" Class="report-type-select" Style="min-width: 200px; width: 100%;">
                 @foreach (var year in AvailableYears)
                 {
                     <MudSelectItem Value="@year">@year</MudSelectItem>
                 }
             </MudSelect>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="DownloadReport" Disabled="@(string.IsNullOrEmpty(SelectedReportType) || SelectedMonth == 0 || SelectedYear == 0)">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="DownloadReport" Disabled="@(string.IsNullOrEmpty(SelectedReportType) || SelectedMonth == 0 || SelectedYear == 0)" Style="width:100%;">
                 Download PDF
             </MudButton>
         </MudStack>
@@ -35,7 +37,6 @@
     private string? SelectedReportType;
     private int SelectedMonth = 0;
     private int SelectedYear = 0;
-    private List<string> ReportTypes = new() { "Student", "Employee" };
     private Dictionary<string, int> AvailableMonths = new();
     private List<int> AvailableYears = new();
 
@@ -66,11 +67,9 @@
             SelectedYear = AvailableYears.First();
     }
 
-    private Task<IEnumerable<string>> SearchReportType(string value, CancellationToken token)
+    private void ClearReportType()
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return Task.FromResult(ReportTypes.AsEnumerable());
-        return Task.FromResult(ReportTypes.Where(x => x.Contains(value, StringComparison.OrdinalIgnoreCase)));
+        SelectedReportType = null;
     }
 
     private async Task DownloadReport()

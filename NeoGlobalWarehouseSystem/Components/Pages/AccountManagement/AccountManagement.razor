@@ -41,7 +41,15 @@
             <DataAnnotationsValidator />
             <MudTextField @bind-Value="UserInput.Name" Label="Name" Required="true" Class="mt-2" />
             <MudTextField @bind-Value="UserInput.Email" Label="Email" Required="true" Class="mt-2" />
-            <MudTextField @bind-Value="UserInput.IdCardNumber" Label="ID Card Number" Required="true" Class="mt-2" />
+            @if (!string.IsNullOrEmpty(UserInput.Email) && !IsEmailValid(UserInput.Email))
+            {
+                <MudText Color="Color.Error" Typo="Typo.caption">Invalid email address</MudText>
+            }
+            <MudNumericField T="string" @bind-Value="UserInput.IdCardNumber" Label="ID Card Number" Required="true" MaxLength="16" Immediate="true" Class="mt-2" />
+            @if (!string.IsNullOrEmpty(UserInput.IdCardNumber) && !IsIdCardValid(UserInput.IdCardNumber))
+            {
+                <MudText Color="Color.Error" Typo="Typo.caption">ID Card Number must be exactly 16 digits</MudText>
+            }
             <MudSelect T="UserRole" @bind-Value="UserInput.Role" Label="Role" Required="true" Class="mt-2" Disabled="@IsRoleEditDisabled">
                 @foreach (UserRole role in Enum.GetValues(typeof(UserRole)))
                 {
@@ -52,11 +60,15 @@
             {
                 <MudTextField @bind-Value="UserInput.Password" Label="Password" InputType="InputType.Password" Required="true" Class="mt-2" />
                 <MudTextField @bind-Value="UserInput.ConfirmPassword" Label="Confirm Password" InputType="InputType.Password" Required="true" Class="mt-2" />
+                @if (!string.IsNullOrEmpty(UserInput.Password) && !string.IsNullOrEmpty(UserInput.ConfirmPassword) && UserInput.Password != UserInput.ConfirmPassword)
+                {
+                    <MudText Color="Color.Error" Typo="Typo.caption">Passwords do not match</MudText>
+                }
             }
         </EditForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(IsEditMode ? UpdateUser : CreateUser)" Disabled="@GetUpdateButtonDisabled()">@((IsEditMode ? "Update" : "Create"))</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" @onclick="@(IsEditMode ? UpdateUser : CreateUser)" Disabled="@(GetUpdateButtonDisabled() || !IsIdCardValid(UserInput.IdCardNumber) || !IsEmailValid(UserInput.Email) || (!IsEditMode && UserInput.Password != UserInput.ConfirmPassword))">@((IsEditMode ? "Update" : "Create"))</MudButton>
         <MudButton Variant="Variant.Text" OnClick="CloseDialog">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
@@ -278,4 +290,13 @@
     }
 
     bool GetUpdateButtonDisabled() => IsEditMode && IsRoleEditDisabled;
+
+    private bool IsIdCardValid(string idCard)
+    {
+        return !string.IsNullOrEmpty(idCard) && idCard.Length == 16 && idCard.All(char.IsDigit);
+    }
+    private bool IsEmailValid(string email)
+    {
+        return !string.IsNullOrEmpty(email) && email.Contains("@");
+    }
 }
