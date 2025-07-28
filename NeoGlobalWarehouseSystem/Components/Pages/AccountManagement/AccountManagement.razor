@@ -26,6 +26,7 @@
                     <CellTemplate Context="ctx">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => OpenEditDialog(ctx.Item, currentUserId))" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" Disabled="@(ctx.Item.Id.ToString() == currentUserId)" OnClick="@(() => OpenDeleteDialog(ctx.Item))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Lock" Color="Color.Secondary" Size="Size.Small" OnClick="@(() => OpenChangePasswordDialog(ctx.Item))" />
                     </CellTemplate>
                 </TemplateColumn>
             </Columns>
@@ -71,6 +72,21 @@
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="ChangePasswordDialogVisible" Options="new DialogOptions() { MaxWidth = MaxWidth.Small }">
+    <DialogContent>
+        <MudText Typo="Typo.h6">Change Password for @UserToChangePassword?.Name</MudText>
+        <EditForm Model="ChangePasswordInput" OnValidSubmit="ChangePasswordAsync">
+            <DataAnnotationsValidator />
+            <MudTextField @bind-Value="ChangePasswordInput.NewPassword" Label="New Password" InputType="InputType.Password" Required="true" Class="mt-2" />
+            <MudTextField @bind-Value="ChangePasswordInput.ConfirmPassword" Label="Confirm Password" InputType="InputType.Password" Required="true" Class="mt-2" />
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ChangePasswordAsync">Change</MudButton>
+        <MudButton Variant="Variant.Text" OnClick="() => ChangePasswordDialogVisible = false">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     public class UserInputModel
     {
@@ -89,12 +105,26 @@
     List<User> Users = new();
     bool CreateEditDialogVisible = false;
     bool DeleteDialogVisible = false;
+    bool ChangePasswordDialogVisible = false;
     bool IsEditMode = false;
     UserInputModel UserInput = new();
     User? UserToEdit;
     User? UserToDelete;
+    User? UserToChangePassword;
     string? CurrentUserId;
     bool IsRoleEditDisabled = false;
+
+    public class ChangePasswordInputModel
+    {
+        [Required]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters.")]
+        public string NewPassword { get; set; } = string.Empty;
+        [Required]
+        [Compare("NewPassword", ErrorMessage = "Passwords do not match.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    ChangePasswordInputModel ChangePasswordInput = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,6 +166,13 @@
     {
         UserToDelete = user;
         DeleteDialogVisible = true;
+    }
+
+    void OpenChangePasswordDialog(User user)
+    {
+        UserToChangePassword = user;
+        ChangePasswordInput = new ChangePasswordInputModel();
+        ChangePasswordDialogVisible = true;
     }
 
     void CloseDialog()
@@ -212,6 +249,27 @@
             Snackbar.Add("User deleted successfully", Severity.Success);
             DeleteDialogVisible = false;
             await FetchUsers();
+        }
+        else
+        {
+            Snackbar.Add(string.Join(", ", result.Errors.Select(e => e.Description)), Severity.Error);
+        }
+    }
+
+    async Task ChangePasswordAsync()
+    {
+        if (UserToChangePassword == null) return;
+        if (ChangePasswordInput.NewPassword != ChangePasswordInput.ConfirmPassword)
+        {
+            Snackbar.Add("Passwords do not match", Severity.Error);
+            return;
+        }
+        var token = await UserManager.GeneratePasswordResetTokenAsync(UserToChangePassword);
+        var result = await UserManager.ResetPasswordAsync(UserToChangePassword, token, ChangePasswordInput.NewPassword);
+        if (result.Succeeded)
+        {
+            Snackbar.Add("Password changed successfully", Severity.Success);
+            ChangePasswordDialogVisible = false;
         }
         else
         {
