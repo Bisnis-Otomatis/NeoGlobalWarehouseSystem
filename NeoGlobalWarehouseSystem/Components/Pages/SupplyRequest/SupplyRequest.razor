@@ -4,119 +4,125 @@
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
-@using NeoGlobalWarehouseSystem.Data.ApplicationDb
 
-<MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
-    <AuthorizeView>
-        @{
-            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        }
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<User> UserManager
 
-        <!-- 1. Select Employee dan Employee Type di paling atas -->
-        <MudStack Class="mt-3">
-            <MudAutocomplete T="NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee" Label="Select Employee" Value="SelectedEmployee"
-                             SearchFunc="@SearchEmployee" ToStringFunc="x => x.Name" Class="mt-3" ValueChanged="OnEmployeeChanged" />
-            <MudSelect T="EmployeeType" Label="Employee Type" Class="mt-3" Disabled="true" Value="@(SelectedEmployee?.Type ?? EmployeeType.None)">
-                @foreach (var type in Enum.GetValues<EmployeeType>())
-                {
-                    <MudSelectItem Value="@type">@type.ToString()</MudSelectItem>
-                }
-            </MudSelect>
-        </MudStack>
-
-        <!-- 2. Cari produk dan Cart hanya muncul jika sudah memilih employee -->
-        @if (SelectedEmployee != null)
-        {
-            <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-3">
-                <MudIcon Icon="@Icons.Material.Filled.AddBox" /> <MudText Typo="Typo.h6">Add Product</MudText>
-            </MudStack>
-
-            <MudFocusTrap>
-                <MudAutocomplete T="Product" Label="Cari Produk" @bind-Value="ProductSelected"
-                                 SearchFunc="@Search" ToStringFunc="x => x.Name" Class="mt-3" />
-                @if (ProductSelected != null)
-                {
-                    <MudCard Class="mt-1">
-                        <MudCardContent>
-                            <MudText>@ProductSelected.Name</MudText>
-                            <MudText Typo="Typo.body2">Quantity: @ProductSelected.Quantity</MudText>
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudStack Row>
-                                <MudNumericField Style="width:100px;" Variant="Variant.Outlined" Value="@QuantityToOrder" ValueChanged="@((int? value) => OnQuantityChanged(value))" ValueExpression="@(() => QuantityToOrder)" Min="0" Max="@ProductSelected.Quantity"></MudNumericField>
-                                <MudButton Variant="Variant.Text" Disabled="@(QuantityToOrder == 0 || ProductSelected.Quantity == 0 || QuantityToOrder == null || QuantityToOrder > ProductSelected.Quantity)" OnClick="AddToCart" Color="Color.Primary" >Add to Cart</MudButton>
-                            </MudStack>
-                        </MudCardActions>
-                    </MudCard>
-                }
-            </MudFocusTrap>
-
-            <MudDivider />
-
-            <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-5">
-                <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" /> <MudText Typo="Typo.h6">Cart</MudText>
-            </MudStack>
-            @if (Cart.Count > 0)
-            {
-                <MudDataGrid Items="Cart" Class="mt-2" Dense="true">
-                    <Columns>
-                        <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
-                        <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>
-                        <TemplateColumn Title="Action">
-                            <CellTemplate Context="actionContext">
-                                <MudStack Row Spacing="0">
-                                    <MudIconButton Size="Size.Small"
-                                                   Icon="@Icons.Material.Filled.Edit"
-                                                   OnClick="@(() => OpenEditDialog(actionContext.Item))" />
-                                    <MudIconButton Size="Size.Small"
-                                                   Icon="@Icons.Material.Filled.Delete"
-                                                   Color="Color.Error"
-                                                   OnClick="@(() => OpenDeleteDialog(actionContext.Item))" />
-                                </MudStack>
-                            </CellTemplate>
-                        </TemplateColumn>
-                    </Columns>
-                </MudDataGrid>
+@if(LoggedInUserRole == UserRole.Admin || LoggedInUserRole == UserRole.Storeman)
+{
+    <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
+        <AuthorizeView>
+            @{
+                var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             }
-        }
 
-        <!-- Dialogs tetap di luar if agar tetap bisa digunakan -->
-        <MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
-            <DialogContent>
-                <MudText Typo="Typo.h6">Edit Quantity for @CartItemToEdit?.Product.Name</MudText>
-                <MudNumericField @bind-Value="NewQuantity" Min="1" Max="@MaxEditableQuantity"
-                                 Label="New Quantity" Style="width:100%;" />
-            </DialogContent>
-            <DialogActions>
-                <MudButton Variant="Variant.Filled" OnClick="UpdateCartItem">Update</MudButton>
-                <MudButton Variant="Variant.Text" OnClick="() => EditDialogVisible = false">Cancel</MudButton>
-            </DialogActions>
-        </MudDialog>
+            <!-- 1. Select Employee dan Employee Type di paling atas -->
+            <MudStack Class="mt-3">
+                <MudAutocomplete T="NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee" Label="Select Employee" Value="SelectedEmployee"
+                                 SearchFunc="@SearchEmployee" ToStringFunc="x => x.Name" Class="mt-3" ValueChanged="OnEmployeeChanged" />
+                <MudSelect T="EmployeeType" Label="Employee Type" Class="mt-3" Disabled="true" Value="@(SelectedEmployee?.Type ?? EmployeeType.None)">
+                    @foreach (var type in Enum.GetValues<EmployeeType>())
+                    {
+                        <MudSelectItem Value="@type">@type.ToString()</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
 
-        <MudDialog @bind-Visible="DeleteDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
-            <TitleContent>
-                <MudText Typo="Typo.h6">Delete Product?</MudText>
-            </TitleContent>
-            <DialogContent>
-                Are you sure you want to remove <b>@CartItemToDelete?.Product.Name</b> from the cart?
-            </DialogContent>
-            <DialogActions>
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Error"
-                           OnClick="DeleteCartItem">
-                    Delete
-                </MudButton>
-                <MudButton Variant="Variant.Text"
-                           OnClick="() => DeleteDialogVisible = false">
-                    Cancel
-                </MudButton>
-            </DialogActions>
-        </MudDialog>
+            <!-- 2. Cari produk dan Cart hanya muncul jika sudah memilih employee -->
+            @if (SelectedEmployee != null)
+            {
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-3">
+                    <MudIcon Icon="@Icons.Material.Filled.AddBox" /> <MudText Typo="Typo.h6">Add Product</MudText>
+                </MudStack>
 
-        <!-- Tombol submit tetap di bawah -->
-        <MudButton class="mt-3" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ShoppingCartCheckout" Disabled="@(Cart.Count == 0)" OnClick="async x => await ProcessTransaction(userId)">Submit Supply Request</MudButton>
-    </AuthorizeView>
-</MudContainer>
+                <MudFocusTrap>
+                    <MudAutocomplete T="Product" Label="Cari Produk" @bind-Value="ProductSelected"
+                                     SearchFunc="@Search" ToStringFunc="x => x.Name" Class="mt-3" />
+                    @if (ProductSelected != null)
+                    {
+                        <MudCard Class="mt-1">
+                            <MudCardContent>
+                                <MudText>@ProductSelected.Name</MudText>
+                                <MudText Typo="Typo.body2">Quantity: @ProductSelected.Quantity</MudText>
+                            </MudCardContent>
+                            <MudCardActions>
+                                <MudStack Row>
+                                    <MudNumericField Style="width:100px;" Variant="Variant.Outlined" Value="@QuantityToOrder" ValueChanged="@((int? value) => OnQuantityChanged(value))" ValueExpression="@(() => QuantityToOrder)" Min="0" Max="@ProductSelected.Quantity"></MudNumericField>
+                                    <MudButton Variant="Variant.Text" Disabled="@(QuantityToOrder == 0 || ProductSelected.Quantity == 0 || QuantityToOrder == null || QuantityToOrder > ProductSelected.Quantity)" OnClick="AddToCart" Color="Color.Primary">Add to Cart</MudButton>
+                                </MudStack>
+                            </MudCardActions>
+                        </MudCard>
+                    }
+                </MudFocusTrap>
+
+                <MudDivider />
+
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-5">
+                    <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" /> <MudText Typo="Typo.h6">Cart</MudText>
+                </MudStack>
+                @if (Cart.Count > 0)
+                {
+                    <MudDataGrid Items="Cart" Class="mt-2" Dense="true">
+                        <Columns>
+                            <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
+                            <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>
+                            <TemplateColumn Title="Action">
+                                <CellTemplate Context="actionContext">
+                                    <MudStack Row Spacing="0">
+                                        <MudIconButton Size="Size.Small"
+                                                       Icon="@Icons.Material.Filled.Edit"
+                                                       OnClick="@(() => OpenEditDialog(actionContext.Item))" />
+                                        <MudIconButton Size="Size.Small"
+                                                       Icon="@Icons.Material.Filled.Delete"
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => OpenDeleteDialog(actionContext.Item))" />
+                                    </MudStack>
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                    </MudDataGrid>
+                }
+            }
+
+            <!-- Dialogs tetap di luar if agar tetap bisa digunakan -->
+            <MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
+                <DialogContent>
+                    <MudText Typo="Typo.h6">Edit Quantity for @CartItemToEdit?.Product.Name</MudText>
+                    <MudNumericField @bind-Value="NewQuantity" Min="1" Max="@MaxEditableQuantity"
+                                     Label="New Quantity" Style="width:100%;" />
+                </DialogContent>
+                <DialogActions>
+                    <MudButton Variant="Variant.Filled" OnClick="UpdateCartItem">Update</MudButton>
+                    <MudButton Variant="Variant.Text" OnClick="() => EditDialogVisible = false">Cancel</MudButton>
+                </DialogActions>
+            </MudDialog>
+
+            <MudDialog @bind-Visible="DeleteDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
+                <TitleContent>
+                    <MudText Typo="Typo.h6">Delete Product?</MudText>
+                </TitleContent>
+                <DialogContent>
+                    Are you sure you want to remove <b>@CartItemToDelete?.Product.Name</b> from the cart?
+                </DialogContent>
+                <DialogActions>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Error"
+                               OnClick="DeleteCartItem">
+                        Delete
+                    </MudButton>
+                    <MudButton Variant="Variant.Text"
+                               OnClick="() => DeleteDialogVisible = false">
+                        Cancel
+                    </MudButton>
+                </DialogActions>
+            </MudDialog>
+
+            <!-- Tombol submit tetap di bawah -->
+            <MudButton class="mt-3" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ShoppingCartCheckout" Disabled="@(Cart.Count == 0)" OnClick="async x => await ProcessTransaction(userId)">Submit Supply Request</MudButton>
+        </AuthorizeView>
+    </MudContainer>
+}
 
 @code {
     NeoGlobalWarehouseSystem.Data.ApplicationDb.Employee? SelectedEmployee { get; set; }
@@ -132,10 +138,33 @@
     bool DeleteDialogVisible { get; set; } = false;
     int MaxEditableQuantity => CartItemToEdit?.Product.Quantity ?? 1;
 
+
+    [CascadingParameter]
+    Task<AuthenticationState>? AuthStateTask { get; set; }
+    UserRole? LoggedInUserRole { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadEmployees();
-        await LoadProducts();
+
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var loggedInUser = await UserManager.GetUserAsync(user);
+                if (loggedInUser != null)
+                {
+                    LoggedInUserRole = loggedInUser.Role;
+                    if(LoggedInUserRole == UserRole.Admin || LoggedInUserRole == UserRole.Storeman)
+                    {
+                        await LoadEmployees();
+                        await LoadProducts();
+                    }
+                }
+            }
+        }
+
     }
 
     async Task LoadEmployees()
