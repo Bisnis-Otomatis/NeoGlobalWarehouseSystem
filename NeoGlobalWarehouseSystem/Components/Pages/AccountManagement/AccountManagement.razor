@@ -206,7 +206,8 @@
             Email = UserInput.Email,
             UserName = UserInput.Email,
             IdCardNumber = UserInput.IdCardNumber,
-            Role = UserInput.Role
+            Role = UserInput.Role,
+            EmailConfirmed = true // Assuming email confirmation is not required for new users
         };
         var result = await UserManager.CreateAsync(user, UserInput.Password);
         if (result.Succeeded)
@@ -229,12 +230,20 @@
             Snackbar.Add("You cannot change your own role.", Severity.Error);
             return;
         }
-        UserToEdit.Name = UserInput.Name;
-        UserToEdit.Email = UserInput.Email;
-        UserToEdit.UserName = UserInput.Email;
-        UserToEdit.IdCardNumber = UserInput.IdCardNumber;
-        UserToEdit.Role = UserInput.Role;
-        var result = await UserManager.UpdateAsync(UserToEdit);
+        // Fetch user from UserManager to avoid multiple tracked instances
+        var user = await UserManager.FindByIdAsync(UserToEdit.Id.ToString());
+        if (user == null)
+        {
+            Snackbar.Add("User not found.", Severity.Error);
+            return;
+        }
+        user.Name = UserInput.Name;
+        user.Email = UserInput.Email;
+        user.UserName = UserInput.Email;
+        user.IdCardNumber = UserInput.IdCardNumber;
+        user.Role = UserInput.Role;
+        user.EmailConfirmed = true; // Assuming email confirmation is not required for updates
+        var result = await UserManager.UpdateAsync(user);
         if (result.Succeeded)
         {
             Snackbar.Add("User updated successfully", Severity.Success);
@@ -270,14 +279,28 @@
 
     async Task ChangePasswordAsync()
     {
-        if (UserToChangePassword == null) return;
+        if (UserToChangePassword == null)
+        {
+            Snackbar.Add("No user selected for password change.", Severity.Error);
+            StateHasChanged();
+            return;
+        }
         if (ChangePasswordInput.NewPassword != ChangePasswordInput.ConfirmPassword)
         {
             Snackbar.Add("Passwords do not match", Severity.Error);
+            StateHasChanged();
             return;
         }
-        var token = await UserManager.GeneratePasswordResetTokenAsync(UserToChangePassword);
-        var result = await UserManager.ResetPasswordAsync(UserToChangePassword, token, ChangePasswordInput.NewPassword);
+        // Re-fetch the user from the UserManager to avoid multiple tracked instances
+        var user = await UserManager.FindByIdAsync(UserToChangePassword.Id.ToString());
+        if (user == null)
+        {
+            Snackbar.Add("User not found.", Severity.Error);
+            StateHasChanged();
+            return;
+        }
+        var token = await UserManager.GeneratePasswordResetTokenAsync(user);
+        var result = await UserManager.ResetPasswordAsync(user, token, ChangePasswordInput.NewPassword);
         if (result.Succeeded)
         {
             Snackbar.Add("Password changed successfully", Severity.Success);
@@ -285,8 +308,10 @@
         }
         else
         {
-            Snackbar.Add(string.Join(", ", result.Errors.Select(e => e.Description)), Severity.Error);
+            var errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+            Snackbar.Add($"Failed to change password: {errorMsg}", Severity.Error);
         }
+        StateHasChanged();
     }
 
     bool GetUpdateButtonDisabled() => IsEditMode && IsRoleEditDisabled;
