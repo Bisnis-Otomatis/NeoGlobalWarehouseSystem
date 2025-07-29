@@ -63,7 +63,7 @@
                 </MudStack>
                 @if (Cart.Count > 0)
                 {
-                    <MudDataGrid Items="Cart" Class="mt-2" Dense="true">
+                    <MudDataGrid Items="Cart" Class="mt-2" Dense="true" Filterable="true">
                         <Columns>
                             <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
                             <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>

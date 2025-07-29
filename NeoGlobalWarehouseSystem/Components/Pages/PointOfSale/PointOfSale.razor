@@ -48,7 +48,7 @@
             <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mt-5">
                 <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" /> <MudText Typo="Typo.h6">Cart</MudText>
             </MudStack>
-            <MudDataGrid Items="Cart" Class="mt-2" Dense="true">
+            <MudDataGrid Items="Cart" Class="mt-2" Dense="true" Filterable="true">
                 <Columns>
                     <PropertyColumn Property="x => x.Product.Name" Title="Product Name"></PropertyColumn>
                     <PropertyColumn Property="x => x.Quantity" Title="Quantity"></PropertyColumn>
