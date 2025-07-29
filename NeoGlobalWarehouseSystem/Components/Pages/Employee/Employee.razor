@@ -2,39 +2,57 @@
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @inject ISnackbar Snackbar
 
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<User> UserManager
+
 <PageTitle>Employee</PageTitle>
+@if (LoggedInUserRole == UserRole.Admin || LoggedInUserRole == UserRole.Storeman)
+{
+    <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
+        <MudStack Row Justify="Justify.SpaceBetween">
+            @if (NewEmployeeExpanded)
+            {
+                <div></div>
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
+                               OnClick="() => NewEmployeeExpanded = !NewEmployeeExpanded"
+                               Color="Color.Primary" Size="Size.Medium" />
+            }
+            else
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.Add"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="() => NewEmployeeExpanded = !NewEmployeeExpanded">
+                    New Employee
+                </MudButton>
+            }
+        </MudStack>
 
-<MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
-    <MudStack Row Justify="Justify.SpaceBetween">
-        @if (NewEmployeeExpanded)
-        {
-            <div></div>
-            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
-                           OnClick="() => NewEmployeeExpanded = !NewEmployeeExpanded"
-                           Color="Color.Primary" Size="Size.Medium" />
-        }
-        else
-        {
-            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                       Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       OnClick="() => NewEmployeeExpanded = !NewEmployeeExpanded">
-                New Employee
-            </MudButton>
-        }
-    </MudStack>
+        <MudCollapse Expanded="NewEmployeeExpanded" Class="py-2">
+            <EmployeeEditor ButtonName="Add Employee"
+                            ProcessedEmployee="AddEmployee" />
+        </MudCollapse>
 
-    <MudCollapse Expanded="NewEmployeeExpanded" Class="py-2">
-        <EmployeeEditor ButtonName="Add Employee"
-                       ProcessedEmployee="AddEmployee" />
-    </MudCollapse>
+        <EmployeeList @ref="EmployeesList" />
+    </MudContainer>
+}
+else
+{
+    <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
+        <MudText Class="text-center">You do not have permission to view this page.</MudText>
+    </MudContainer>
 
-    <EmployeeList @ref="EmployeesList" />
-</MudContainer>
+}
+
 
 @code {
     bool NewEmployeeExpanded = false;
     EmployeeList EmployeesList = new();
+
+    [CascadingParameter]
+    Task<AuthenticationState>? AuthStateTask { get; set; }
+    UserRole? LoggedInUserRole { get; set; }
 
     public async Task AddEmployee(Data.ApplicationDb.Employee employee)
     {
@@ -46,5 +64,21 @@
         Snackbar.Add("Employee has been successfully added", Severity.Success);
 
         await EmployeesList.FetchEmployees();
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var loggedInUser = await UserManager.GetUserAsync(user);
+                if (loggedInUser != null)
+                {
+                    LoggedInUserRole = loggedInUser.Role;
+                }
+            }
+        }
     }
 }

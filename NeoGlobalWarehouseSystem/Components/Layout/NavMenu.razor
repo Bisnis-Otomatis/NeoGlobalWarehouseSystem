@@ -1,5 +1,9 @@
 ﻿@inject NavigationManager NavigationManager
 
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
+
 <MudPaper Width="250px" Elevation="0" Class="py-3">
     <MudNavMenu Color="Color.Info">
         <AuthorizeView>
@@ -9,7 +13,10 @@
             <Authorized>
                 <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
                 <MudNavLink Href="/product" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AddToQueue">Product</MudNavLink>
-                <MudNavLink Href="/employee" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Badge">Employee</MudNavLink>
+                @if (LoggedInUserRole == UserRole.Admin || LoggedInUserRole == UserRole.Storeman)
+                {
+                    <MudNavLink Href="/employee" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Badge">Employee</MudNavLink>
+                }
                 <MudNavLink Href="/point-of-sales" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">Point of Sales</MudNavLink>
                 <MudNavLink Href="/supply-request" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AddShoppingCart">Supply Request</MudNavLink>
                 <MudNavLink Href="/transaction" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ContentPaste">Transaction</MudNavLink>
@@ -29,7 +36,7 @@
         </AuthorizeView>
     </MudNavMenu>
 </MudPaper>
-@* @code{
+@code{
     [CascadingParameter]
     Task<AuthenticationState>? AuthStateTask { get; set; }
     UserRole? LoggedInUserRole { get; set; }
@@ -42,12 +49,20 @@
             var user = authState.User;
             if (user.Identity?.IsAuthenticated == true)
             {
-                var loggedInUser = await UserManager.GetUserAsync(user);
-                if (loggedInUser != null)
+                var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+                if (!string.IsNullOrEmpty(userId))
                 {
-                    LoggedInUserRole = loggedInUser.Role;
+                    using var dbContext = ApplicationDbContextFactory.CreateDbContext();
+                    int intUserId = int.Parse(userId);
+                    var loggedInUser = await dbContext.Users.FindAsync(intUserId);
+
+                    if (loggedInUser != null)
+                    {
+                        LoggedInUserRole = loggedInUser.Role;
+                    }
                 }
             }
         }
     }
-} *@
+}

@@ -2,73 +2,80 @@
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @inject ISnackbar Snackbar
 
-<MudTextField @bind-Value="SearchKeyword"
-              Variant="Variant.Outlined"
-              Class="mt-3"
-              Label="Search Employee"
-              Immediate="true" />
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<User> UserManager
 
-<MudDataGrid Items="@Employees"
-             Dense="true"
-             Hover="true"
-             QuickFilter="PerformSearch">
-    <Columns>
-        <PropertyColumn Property="x => x.Id" Title="ID" />
-        <PropertyColumn Property="x => x.Name" Title="Name" />
-        <TemplateColumn Title="Employee Type">
-            <CellTemplate>
-                @SplitPascalCase(context.Item.Type.ToString())
-            </CellTemplate>
-        </TemplateColumn>
-        <TemplateColumn Title="Action">
-            <CellTemplate>
-                <MudStack Row Spacing="0">
-                    <MudIconButton Size="Size.Small"
-                                   Icon="@Icons.Material.Filled.Edit"
-                                   OnClick="x => OpenEditDialog(context.Item)" />
-                    <MudIconButton Size="Size.Small"
-                                   Icon="@Icons.Material.Filled.Delete"
-                                   Color="Color.Error"
-                                   OnClick="x => OpenDeleteDialog(context.Item)" />
-                </MudStack>
-            </CellTemplate>
-        </TemplateColumn>
-    </Columns>
-</MudDataGrid>
+@if(LoggedInUserRole == UserRole.Admin || LoggedInUserRole == UserRole.Storeman)
+{
+    <MudTextField @bind-Value="SearchKeyword"
+                  Variant="Variant.Outlined"
+                  Class="mt-3"
+                  Label="Search Employee"
+                  Immediate="true" />
 
-<MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
-    <DialogContent>
-        <EmployeeEditor Employee="EmployeeToEdit"
-                       ButtonName="Update Employee"
-                       ProcessedEmployee="UpdateEmployee" />
-    </DialogContent>
-    <DialogActions>
-        <MudButton Variant="Variant.Text"
-                   OnClick="() => EditDialogVisible = false">
-            Cancel
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+    <MudDataGrid Items="@Employees"
+                 Dense="true"
+                 Hover="true"
+                 QuickFilter="PerformSearch">
+        <Columns>
+            <PropertyColumn Property="x => x.Id" Title="ID" />
+            <PropertyColumn Property="x => x.Name" Title="Name" />
+            <TemplateColumn Title="Employee Type">
+                <CellTemplate>
+                    @SplitPascalCase(context.Item.Type.ToString())
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Action">
+                <CellTemplate>
+                    <MudStack Row Spacing="0">
+                        <MudIconButton Size="Size.Small"
+                                       Icon="@Icons.Material.Filled.Edit"
+                                       OnClick="x => OpenEditDialog(context.Item)" />
+                        <MudIconButton Size="Size.Small"
+                                       Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       OnClick="x => OpenDeleteDialog(context.Item)" />
+                    </MudStack>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
 
-<MudDialog @bind-Visible="DeleteDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Delete Employee?</MudText>
-    </TitleContent>
-    <DialogContent>
-        Are you sure you want to delete <b>@EmployeeToDelete.Name</b> (ID: @EmployeeToDelete.Id)?
-    </DialogContent>
-    <DialogActions>
-        <MudButton Variant="Variant.Filled"
-                   Color="Color.Error"
-                   OnClick="async () => await DeleteEmployee(EmployeeToDelete.Id)">
-            Delete
-        </MudButton>
-        <MudButton Variant="Variant.Text"
-                   OnClick="() => DeleteDialogVisible = false">
-            Cancel
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+    <MudDialog @bind-Visible="EditDialogVisible" MaxWidth="MaxWidth.Small">
+        <DialogContent>
+            <EmployeeEditor Employee="EmployeeToEdit"
+                            ButtonName="Update Employee"
+                            ProcessedEmployee="UpdateEmployee" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text"
+                       OnClick="() => EditDialogVisible = false">
+                Cancel
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    <MudDialog @bind-Visible="DeleteDialogVisible" MaxWidth="MaxWidth.ExtraSmall">
+        <TitleContent>
+            <MudText Typo="Typo.h6">Delete Employee?</MudText>
+        </TitleContent>
+        <DialogContent>
+            Are you sure you want to delete <b>@EmployeeToDelete.Name</b> (ID: @EmployeeToDelete.Id)?
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Error"
+                       OnClick="async () => await DeleteEmployee(EmployeeToDelete.Id)">
+                Delete
+            </MudButton>
+            <MudButton Variant="Variant.Text"
+                       OnClick="() => DeleteDialogVisible = false">
+                Cancel
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
 
 @code {
     string SearchKeyword { get; set; } = string.Empty;
@@ -80,6 +87,10 @@
     bool DeleteDialogVisible { get; set; }
     Data.ApplicationDb.Employee EmployeeToDelete { get; set; } = new();
 
+    [CascadingParameter]
+    Task<AuthenticationState>? AuthStateTask { get; set; }
+    UserRole? LoggedInUserRole { get; set; }
+
     public bool PerformSearch(Data.ApplicationDb.Employee employee)
     {
         if (string.IsNullOrWhiteSpace(SearchKeyword))
@@ -90,12 +101,22 @@
 
     public void OpenEditDialog(Data.ApplicationDb.Employee employee)
     {
+        if (LoggedInUserRole != UserRole.Admin)
+        {
+            Snackbar.Add("You do not have permission to delete this employee.", Severity.Error);
+            return;
+        }
         EmployeeToEdit = employee;
         EditDialogVisible = true;
     }
 
     public async Task UpdateEmployee(Data.ApplicationDb.Employee employee)
     {
+        if (LoggedInUserRole != UserRole.Admin)
+        {
+            Snackbar.Add("You do not have permission to update this employee.", Severity.Error);
+            return;
+        }
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
         await db.Employees
                 .Where(t => t.Id == employee.Id)
@@ -109,12 +130,22 @@
 
     public void OpenDeleteDialog(Data.ApplicationDb.Employee employee)
     {
+        if (LoggedInUserRole != UserRole.Admin)
+        {
+            Snackbar.Add("You do not have permission to delete this employee.", Severity.Error);
+            return;
+        }
         EmployeeToDelete = employee;
         DeleteDialogVisible = true;
     }
 
     public async Task DeleteEmployee(int id)
     {
+        if (LoggedInUserRole != UserRole.Admin)
+        {
+            Snackbar.Add("You do not have permission to delete this employee.", Severity.Error);
+            return;
+        }
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
         await db.Employees.Where(t => t.Id == id).ExecuteDeleteAsync();
 
@@ -132,7 +163,23 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await FetchEmployees();
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var loggedInUser = await UserManager.GetUserAsync(user);
+                if (loggedInUser != null)
+                {
+                    LoggedInUserRole = loggedInUser.Role;
+                    if(LoggedInUserRole == UserRole.Admin || LoggedInUserRole == UserRole.Storeman)
+                    {
+                        await FetchEmployees();
+                    }
+                }
+            }
+        }
     }
 
     string SplitPascalCase(string input)
