@@ -5,6 +5,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System.Globalization;
+using System.IO;
 
 namespace NeoGlobalWarehouseSystem.Controllers
 {
@@ -69,6 +70,12 @@ namespace NeoGlobalWarehouseSystem.Controllers
         {
             var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
             var reportTitle = type.ToLower() == "customer" ? "Customer Sales Report" : "Employee Product Take Report";
+            // Hitung grand total untuk customer
+            long grandTotal = 0;
+            if (type.ToLower() == "customer")
+            {
+                grandTotal = transactions.Sum(tx => tx.TransactionProducts.Sum(x => x.Price * x.Quantity));
+            }
             var document = Document.Create(container =>
             {
                 container.Page(page =>
@@ -139,6 +146,12 @@ namespace NeoGlobalWarehouseSystem.Controllers
                                 }
                                 col.Item().PaddingBottom(10);
                             }
+                            // Tambahkan garis horizontal dan grand total di bawah transaksi terakhir (khusus customer)
+                            if (type.ToLower() == "customer")
+                            {
+                                col.Item().PaddingVertical(10).BorderBottom(3).BorderColor(Colors.Black);
+                                col.Item().AlignRight().Text($"Grand Total: Rp. {grandTotal:N0}").FontSize(14).Bold();
+                            }
                         });
                     });
                 });
@@ -147,6 +160,111 @@ namespace NeoGlobalWarehouseSystem.Controllers
             static IContainer CellStyle(IContainer container) =>
                 container.Border(1).BorderColor(Colors.Grey.Darken2).PaddingVertical(2).PaddingHorizontal(4);
 
+            return document.GeneratePdf();
+        }
+
+        [HttpGet("receipt")]
+        [Obsolete]
+        public async Task<IActionResult> DownloadReceipt([FromQuery] int transactionId)
+        {
+            try
+            {
+                await using var db = await _dbFactory.CreateDbContextAsync();
+                var transaction = await db.Transactions
+                    .Include(x => x.TransactionProducts)
+                    .Include(x => x.ProcessedBy)
+                    .Include(x => x.Employee)
+                    .FirstOrDefaultAsync(x => x.Id == transactionId);
+                if (transaction == null)
+                {
+                    return NotFound("Transaction not found");
+                }
+                var pdfBytes = GenerateReceiptPdf(transaction);
+                var fileName = $"Receipt_{transaction.Id}.pdf";
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating receipt PDF");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [Obsolete]
+        private byte[] GenerateReceiptPdf(Data.ApplicationDb.Transaction tx)
+        {
+            // Load logo from wwwroot/images/log.png
+            var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.png");
+            byte[]? logoBytes = null;
+            if (System.IO.File.Exists(logoPath))
+                logoBytes = System.IO.File.ReadAllBytes(logoPath);
+
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Margin(30);
+                    page.Header().Row(row =>
+                    {
+                        row.RelativeItem().Column(col =>
+                        {
+                            if (logoBytes != null)
+                                col.Item().Height(60).Image(logoBytes, ImageScaling.FitHeight);
+                            col.Item().Text("Neo Global School").FontSize(18).Bold();
+                            col.Item().Text("Jl. Gn. Bintan No. 15, Kota Batam");
+                            col.Item().Text("Telp. 08117773775");
+                        });
+                        row.ConstantItem(300).Column(col =>
+                        {
+                            col.Item().AlignRight().Text("BUKTI PEMBAYARAN").FontSize(14).Bold();
+                            col.Item().AlignRight().Text($"TRX{tx.Id.ToString().PadLeft(6, '0')}").FontColor(Colors.Red.Medium).FontSize(14).Bold();
+                        });
+                    });
+                    page.Content().Column(col =>
+                    {
+                        col.Item().Row(row =>
+                        {
+                            row.RelativeItem().Column(c =>
+                            {
+                                c.Item().Text($"Customer : {(tx.Employee != null ? tx.Employee.Name : tx.CustomerName)}").Bold();
+                                c.Item().Text($"Tanggal : {tx.TimeStamp:dd MMM yyyy}");
+                                c.Item().Text($"Kasir : {tx.ProcessedBy.Name}");
+                            });
+                        });
+                        col.Item().PaddingVertical(10);
+                        col.Item().Text($"Kode Transaksi : TRX{tx.Id.ToString().PadLeft(6, '0')}").Bold();
+                        col.Item().Text($"Tanggal : {tx.TimeStamp:dd MMM yyyy HH:mm}");
+                        col.Item().PaddingVertical(10);
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn(); // Product
+                                columns.ConstantColumn(60); // Qty
+                                columns.ConstantColumn(90); // Total
+                            });
+                            table.Header(header =>
+                            {
+                                header.Cell().Element(CellStyle).Text("Product").Bold();
+                                header.Cell().Element(CellStyle).Text("Qty").Bold();
+                                header.Cell().Element(CellStyle).Text("Total").Bold();
+                            });
+                            foreach (var p in tx.TransactionProducts)
+                            {
+                                table.Cell().Element(CellStyle).Text(p.Name);
+                                table.Cell().Element(CellStyle).Text(p.Quantity.ToString());
+                                table.Cell().Element(CellStyle).Text($"Rp. {(p.Price * p.Quantity):N0}");
+                            }
+                        });
+                        col.Item().PaddingVertical(10);
+                        var total = tx.TransactionProducts.Sum(x => x.Price * x.Quantity);
+                        col.Item().AlignRight().Text($"Total Pembayaran  Rp. {total:N0}").FontSize(14).Bold();
+                        col.Item().Text("*Dokumen ini dihasilkan komputer. Tidak perlu tanda tangan.").FontSize(8).Italic();
+                    });
+                });
+            });
+            static IContainer CellStyle(IContainer container) =>
+                container.Border(1).BorderColor(Colors.Grey.Darken2).PaddingVertical(2).PaddingHorizontal(4);
             return document.GeneratePdf();
         }
     }
