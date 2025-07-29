@@ -1,6 +1,8 @@
-# NeoGlobalWarehouseSystem
+# Neo Global Warehouse System
 
 A modern warehouse management system built with **Blazor** (.NET 8), featuring user management, product inventory, transaction processing, and PDF report generation.
+
+<p align="center"><img width="512" height="664" alt="754fe25c-c092-4189-92cb-7ba2d6e0807c" src="https://github.com/user-attachments/assets/efcfb78a-f64a-4602-8a85-ba9d10591758" /></p>
 
 ## Features
 
