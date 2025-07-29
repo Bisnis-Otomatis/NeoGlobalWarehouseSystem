@@ -4,7 +4,10 @@
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @inject ISnackbar Snackbar
 @using TransactionData = NeoGlobalWarehouseSystem.Data.ApplicationDb.Transaction
-@using NeoGlobalWarehouseSystem.Data.ApplicationDb
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<User> UserManager
 
 <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
     <MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product" Immediate="true"></MudTextField>
@@ -253,9 +256,29 @@
 
     List<TransactionDTO> Transactions { get; set; } = new();
 
+
+
+    [CascadingParameter]
+    Task<AuthenticationState>? AuthStateTask { get; set; }
+    UserRole? LoggedInUserRole { get; set; }
+
+
     protected override async Task OnInitializedAsync()
     {
-        await FetchTransactions();
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var loggedInUser = await UserManager.GetUserAsync(user);
+                if (loggedInUser != null)
+                {
+                    await FetchTransactions();
+                    LoggedInUserRole = loggedInUser.Role;
+                }
+            }
+        }
     }
 
     public bool PerformSearch(TransactionDTO transaction)
@@ -327,6 +350,11 @@
 
     public async void OpenEditDialog(TransactionDTO transaction)
     {
+        if(!(LoggedInUserRole == UserRole.Admin))
+        {
+            Snackbar.Add("You do not have permission to edit this transaction.", Severity.Error);
+            return;
+        }
         TransactionToEdit = transaction;
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
         var transactionProducts = await db.TransactionProducts.Where(x => x.TransactionId == transaction.Id).ToListAsync();
@@ -348,6 +376,11 @@
 
     public void AddToEditCart()
     {
+        if (!(LoggedInUserRole == UserRole.Admin))
+        {
+            Snackbar.Add("You do not have permission to edit this transaction.", Severity.Error);
+            return;
+        }
         if (EditProductSelected != null && EditQuantityToOrder != null)
         {
             bool isFound = false;
@@ -375,6 +408,11 @@
 
     public void OpenEditCartDialog(CartItem item)
     {
+        if (!(LoggedInUserRole == UserRole.Admin))
+        {
+            Snackbar.Add("You do not have permission to edit this transaction.", Severity.Error);
+            return;
+        }
         EditCartItemToEdit = item;
         EditNewQuantity = item.Quantity;
         EditCartDialogVisible = true;
@@ -382,12 +420,22 @@
 
     public void OpenDeleteCartDialog(CartItem item)
     {
+        if (!(LoggedInUserRole == UserRole.Admin))
+        {
+            Snackbar.Add("You do not have permission to edit this transaction.", Severity.Error);
+            return;
+        }
         EditCartItemToDelete = item;
         DeleteCartDialogVisible = true;
     }
 
     public void UpdateEditCartItem()
     {
+        if (!(LoggedInUserRole == UserRole.Admin))
+        {
+            Snackbar.Add("You do not have permission to edit this transaction.", Severity.Error);
+            return;
+        }
         if (EditCartItemToEdit != null)
         {
             EditCartItemToEdit.Quantity = Math.Min(EditNewQuantity, EditCartItemToEdit.Product.Quantity);
@@ -397,6 +445,11 @@
 
     public void DeleteEditCartItem()
     {
+        if (!(LoggedInUserRole == UserRole.Admin))
+        {
+            Snackbar.Add("You do not have permission to edit this transaction.", Severity.Error);
+            return;
+        }
         if (EditCartItemToDelete != null)
         {
             EditCart.Remove(EditCartItemToDelete);
@@ -406,6 +459,11 @@
 
     public async void SaveEditTransaction()
     {
+        if (!(LoggedInUserRole == UserRole.Admin))
+        {
+            Snackbar.Add("You do not have permission to edit this transaction.", Severity.Error);
+            return;
+        }
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
         // Ambil produk lama
         var oldProducts = await db.TransactionProducts.Where(x => x.TransactionId == TransactionToEdit.Id).ToListAsync();
@@ -447,12 +505,22 @@
 
     public void OpenDeleteDialog(TransactionDTO transaction)
     {
+        if (!(LoggedInUserRole == UserRole.Admin))
+        {
+            Snackbar.Add("You do not have permission to delete this transaction.", Severity.Error);
+            return;
+        }
         TransactionToDelete = transaction;
         DeleteDialogVisible = true;
     }
 
     public async Task DeleteTransaction(int id)
     {
+        if (!(LoggedInUserRole == UserRole.Admin))
+        {
+            Snackbar.Add("You do not have permission to delete this transaction.", Severity.Error);
+            return;
+        }
         await using var db = await ApplicationDbContextFactory.CreateDbContextAsync();
         await db.TransactionProducts.Where(t => t.TransactionId == id).ExecuteDeleteAsync();
         await db.Transactions.Where(t => t.Id == id).ExecuteDeleteAsync();
