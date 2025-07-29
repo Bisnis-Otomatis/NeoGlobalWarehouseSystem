@@ -1,7 +1,10 @@
 ﻿@using System.Globalization
 @inject IDbContextFactory<ApplicationDbContext> ApplicationDbContextFactory
 @inject ISnackbar Snackbar
-@using NeoGlobalWarehouseSystem.Data.ApplicationDb
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<User> UserManager
 
 <MudTextField @bind-Value="SearchKeyword" Variant="Variant.Outlined" Class="mt-3" Label="Search Product" Immediate="true"></MudTextField>
 
@@ -66,14 +69,17 @@
                 </CellTemplate>
             </PropertyColumn>
         }
-        <TemplateColumn Title="Action">
-            <CellTemplate>
-                <MudStack Row Spacing="0">
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="x => OpenUpdateDialog(context.Item.Product)" />
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" OnClick="x => OpenDeleteDialog(context.Item.Product)" />
-                </MudStack>
-            </CellTemplate>
-        </TemplateColumn>
+        @if(LoggedInUserRole == UserRole.Admin)
+        {
+            <TemplateColumn Title="Action">
+                <CellTemplate>
+                    <MudStack Row Spacing="0">
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="x => OpenUpdateDialog(context.Item.Product)" />
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" OnClick="x => OpenDeleteDialog(context.Item.Product)" />
+                    </MudStack>
+                </CellTemplate>
+            </TemplateColumn>
+        }
     </Columns>
 </MudDataGrid>
 
@@ -113,6 +119,11 @@
 
     DialogOptions _dialogOptions = new() { FullWidth = true };
 
+    [CascadingParameter]
+    Task<AuthenticationState>? AuthStateTask { get; set; }
+    UserRole? LoggedInUserRole { get; set; }
+
+
     public bool PerformSearch(ProductDTO productDTO)
     {
         if (SearchKeyword == "")
@@ -135,6 +146,11 @@
 
     public void OpenUpdateDialog(NeoGlobalWarehouseSystem.Data.ApplicationDb.Product product)
     {
+        if (LoggedInUserRole != UserRole.Admin)
+        {
+            Snackbar.Add("You do not have permission to edit this product.", Severity.Error);
+            return;
+        }
         EditDialogIsVisible = true;
         ProductSentToEditDialog = product;
     }
@@ -143,6 +159,11 @@
 
     public async Task UpdateProduct(NeoGlobalWarehouseSystem.Data.ApplicationDb.Product product)
     {
+        if (LoggedInUserRole != UserRole.Admin)
+        {
+            Snackbar.Add("You do not have permission to edit this product.", Severity.Error);
+            return;
+        }
         await using var applicationDbContext = await ApplicationDbContextFactory.CreateDbContextAsync();
 
         await applicationDbContext.Products.Where(x => x.Id == product.Id).ExecuteUpdateAsync(setter => setter
@@ -162,12 +183,22 @@
 
     public void OpenDeleteDialog(NeoGlobalWarehouseSystem.Data.ApplicationDb.Product product)
     {
+        if (LoggedInUserRole != UserRole.Admin)
+        {
+            Snackbar.Add("You do not have permission to delete this product.", Severity.Error);
+            return;
+        }
         DeleteDialogIsVisible = true;
         ProductSentToDeleteDialog = product;
     }
 
     public async Task DeleteProduct(int Id)
     {
+        if (LoggedInUserRole != UserRole.Admin)
+        {
+            Snackbar.Add("You do not have permission to delete this product.", Severity.Error);
+            return;
+        }
         await using var applicationDbContext = await ApplicationDbContextFactory.CreateDbContextAsync();
         await applicationDbContext.Products.Where(x => x.Id == Id).ExecuteDeleteAsync();
 
@@ -192,7 +223,20 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await FetchProducts();
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var loggedInUser = await UserManager.GetUserAsync(user);
+                if (loggedInUser != null)
+                {
+                    await FetchProducts();
+                    LoggedInUserRole = loggedInUser.Role;
+                }
+            }
+        }
     }
 
     public class ProductDTO

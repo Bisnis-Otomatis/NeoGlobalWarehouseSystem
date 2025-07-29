@@ -29,3 +29,25 @@
         </AuthorizeView>
     </MudNavMenu>
 </MudPaper>
+@* @code{
+    [CascadingParameter]
+    Task<AuthenticationState>? AuthStateTask { get; set; }
+    UserRole? LoggedInUserRole { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var loggedInUser = await UserManager.GetUserAsync(user);
+                if (loggedInUser != null)
+                {
+                    LoggedInUserRole = loggedInUser.Role;
+                }
+            }
+        }
+    }
+} *@

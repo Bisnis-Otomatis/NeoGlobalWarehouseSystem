@@ -5,24 +5,33 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<User> UserManager
+
 <PageTitle>Product</PageTitle>
 
 <AuthorizeView>
     <MudContainer Class="mt-5" MaxWidth="MaxWidth.ExtraLarge">
-        <MudStack Row Justify="Justify.SpaceBetween">
-            @if (NewProductExpanded)
-            {
-                <div></div>
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" OnClick="() => NewProductExpanded = !NewProductExpanded" Color="Color.Primary" Size="Size.Medium" Disabled="NewProductExpanded == false" />
-            }
-            else
-            {
-                <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary" OnClick="() => NewProductExpanded = !NewProductExpanded" Disabled="NewProductExpanded == true">New Product</MudButton>
-            }
-        </MudStack>
+        @if(LoggedInUserRole == UserRole.Admin)
+        {
+            <MudStack Row Justify="Justify.SpaceBetween">
+                @if (NewProductExpanded)
+                {
+                    <div></div>
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" OnClick="() => NewProductExpanded = !NewProductExpanded" Color="Color.Primary" Size="Size.Medium" Disabled="NewProductExpanded == false" />
+                }
+                else
+                {
+                    <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary" OnClick="() => NewProductExpanded = !NewProductExpanded" Disabled="NewProductExpanded == true">New Product</MudButton>
+                }
+            </MudStack>
+        }
+
         <MudCollapse Expanded="NewProductExpanded" Class="py-2">
             <ProductEditor ButtonName="Add Product" ProcessedProduct="AddProduct" />
         </MudCollapse>
+
         <ProductsList @ref="ProductsList" />
     </MudContainer>
 </AuthorizeView>
@@ -30,6 +39,12 @@
 @code {
     bool NewProductExpanded = false;
     ProductsList ProductsList = new();
+
+
+    [CascadingParameter]
+    Task<AuthenticationState>? AuthStateTask { get; set; }
+    UserRole? LoggedInUserRole { get; set; }
+
 
     public async Task AddProduct(Data.ApplicationDb.Product product)
     {
@@ -63,5 +78,21 @@
 
         // 5) Refresh your list
         await ProductsList.FetchProducts();
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var loggedInUser = await UserManager.GetUserAsync(user);
+                if (loggedInUser != null)
+                {
+                    LoggedInUserRole = loggedInUser.Role;
+                }
+            }
+        }
     }
 }
