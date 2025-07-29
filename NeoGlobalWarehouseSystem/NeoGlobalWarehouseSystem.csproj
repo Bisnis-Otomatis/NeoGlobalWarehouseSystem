@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
+	<Version>1.0.0</Version>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-NeoGlobalWarehouseSystem-b35339fe-0305-4811-a9e6-2da895786962</UserSecretsId>
   </PropertyGroup>
