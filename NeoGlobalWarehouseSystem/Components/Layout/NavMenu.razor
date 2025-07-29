@@ -17,7 +17,10 @@
                 {
                     <MudNavLink Href="/employee" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Badge">Employee</MudNavLink>
                 }
-                <MudNavLink Href="/point-of-sales" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">Point of Sales</MudNavLink>
+                @if(LoggedInUserRole == UserRole.Admin || LoggedInUserRole == UserRole.Cashier)
+                {
+                    <MudNavLink Href="/point-of-sales" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">Point of Sales</MudNavLink>
+                }
                 <MudNavLink Href="/supply-request" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AddShoppingCart">Supply Request</MudNavLink>
                 <MudNavLink Href="/transaction" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ContentPaste">Transaction</MudNavLink>
                 <MudNavLink Href="/report" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dataset">Report</MudNavLink>
